@@ -86,6 +86,9 @@ int SimpleMbedCloudClient::init() {
         return 1;
     }
 
+    //Initialise the storage
+    int mount_result = mount_storage();
+
     // This is designed to simplify user-experience by auto-formatting the
     // primary storage if no valid certificates exist.
     // This should never be used for any kind of production devices.
@@ -371,4 +374,14 @@ void SimpleMbedCloudClient::reset_storage()
     if (delete_status != FCC_STATUS_SUCCESS) {
         printf("[Simple Cloud Client] Failed to delete storage - %d\n", delete_status);
     }
+}
+
+int SimpleMbedCloudClient::mount_storage()
+{
+	int mount_result = -1;
+	printf("[Simple Cloud Client] Initialising storage.\n");
+	if (_bd) {
+		mount_result = _fs->mount(_bd);
+	}
+	return mount_result;
 }
