@@ -88,6 +88,10 @@ int SimpleMbedCloudClient::init() {
 
     //Initialise the storage
     int mount_result = mount_storage();
+	if (mount_result != 0) {
+		printf("[Simple Cloud Client] Failed to mount file system with status %d. \n", mount_result);
+		return 1;
+	}
 
     // This is designed to simplify user-experience by auto-formatting the
     // primary storage if no valid certificates exist.
