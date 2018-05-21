@@ -86,10 +86,6 @@ int SimpleMbedCloudClient::init() {
         return 1;
     }
 
-    // This is designed to simplify user-experience by auto-formatting the
-    // primary storage if no valid certificates exist.
-    // This should never be used for any kind of production devices.
-#if defined(MBED_CONF_APP_FORMAT_STORAGE_LAYER_ON_ERROR) && MBED_CONF_APP_FORMAT_STORAGE_LAYER_ON_ERROR == 1
     fcc_status = fcc_verify_device_configured_4mbed_cloud();
 
     if (fcc_status == FCC_STATUS_KCM_STORAGE_ERROR) {
@@ -102,6 +98,11 @@ int SimpleMbedCloudClient::init() {
             fcc_status = fcc_verify_device_configured_4mbed_cloud();
         }
     }
+
+    // This is designed to simplify user-experience by auto-formatting the
+    // primary storage if no valid certificates exist.
+    // This should never be used for any kind of production devices.
+#if defined(MBED_CONF_APP_FORMAT_STORAGE_LAYER_ON_ERROR) && MBED_CONF_APP_FORMAT_STORAGE_LAYER_ON_ERROR == 1
     if (fcc_status != FCC_STATUS_SUCCESS) {
         if (reformat_storage() != 0) {
             return 1;
@@ -110,18 +111,6 @@ int SimpleMbedCloudClient::init() {
         reset_storage();
     }
 #else
-    fcc_status = fcc_verify_device_configured_4mbed_cloud();
-
-    if (fcc_status == FCC_STATUS_KCM_STORAGE_ERROR) {
-        int mount_result = mount_storage();
-        if (mount_result != 0) {
-            printf("[Simple Cloud Client] Failed to mount file system with status %d. \n", mount_result);
-            return 1;
-        } else {
-            // Retry with mounted filesystem.
-            fcc_status = fcc_verify_device_configured_4mbed_cloud();
-        }
-    }
     if (fcc_status != FCC_STATUS_SUCCESS) {
         printf("[Simple Cloud Client] Device not configured for mbed Cloud - try re-formatting your storage device or set MBED_CONF_APP_FORMAT_STORAGE_LAYER_ON_ERROR to 1\n");
         return 1;
