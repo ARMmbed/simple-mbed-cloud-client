@@ -92,7 +92,9 @@ int SimpleMbedCloudClient::init() {
         int mount_result = mount_storage();
         if (mount_result != 0) {
             printf("[Simple Cloud Client] Failed to mount file system with status %d. \n", mount_result);
+#if !defined(MBED_CONF_APP_FORMAT_STORAGE_LAYER_ON_ERROR) || MBED_CONF_APP_FORMAT_STORAGE_LAYER_ON_ERROR == 0
             return 1;
+#endif
         } else {
             // Retry with mounted filesystem.
             fcc_status = fcc_verify_device_configured_4mbed_cloud();
