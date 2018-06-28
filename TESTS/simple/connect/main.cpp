@@ -1,38 +1,94 @@
-/*
- * mbed Microcontroller Library
- * Copyright (c) 2006-2016 ARM Limited
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/** @file fopen.cpp Test cases to POSIX file fopen() interface.
- *
- * Please consult the documentation under the test-case functions for
- * a description of the individual test case.
- */
 
 #include "mbed.h"
+#include "FATFileSystem.h"
+#include "simple-mbed-cloud-client.h"
 
 #include "utest/utest.h"
 #include "unity/unity.h"
 #include "greentea-client/test_env.h"
 
+#if defined(MBED_CONF_APP_TEST_CONNECT_HEADER_FILE)
+#include MBED_CONF_APP_TEST_CONNECT_HEADER_FILE
+#else
+#include "EthernetInterface.h"
+#endif
+
+#if defined(MBED_CONF_APP_TEST_BLOCK_DEVICE_HEADER_FILE)
+#include MBED_CONF_APP_TEST_BLOCK_DEVICE_HEADER_FILE
+#else
+#include "SDBlockDevice.h"
+#endif
+
+
 using namespace utest::v1;
+
+void registered(const ConnectorClientEndpointInfo *endpoint) {
+    printf("Connected to Mbed Cloud. Device ID: %s\n", endpoint->internal_endpoint_name.c_str());
+}
 
 void smcc_register(void){
 
-	printf("Test is run.");
-    TEST_ASSERT_TRUE(true);
+	int timeout = 0;
+//	char _key[20] = {};
+//	char _value[128] = {};
+
+	// Storage definition.
+#if defined(MBED_CONF_APP_TEST_BLOCK_DEVICE_OBJECT)
+	MBED_CONF_APP_TEST_BLOCK_DEVICE_OBJECT
+#else
+	SDBlockDevice bd(MBED_CONF_APP_SPI_MOSI, MBED_CONF_APP_SPI_MISO, MBED_CONF_APP_SPI_CLK, MBED_CONF_APP_SPI_CS);
+#endif
+	FATFileSystem fs ("sd", &bd);
+
+	// Connection definition.
+#if defined(MBED_CONF_APP_TEST_SOCKET_OBJECT)
+	MBED_CONF_APP_TEST_SOCKET_OBJECT
+#else
+	EthernetInterface net;
+#endif
+
+#if defined(MBED_CONF_APP_TEST_SOCKET_CONNECT)
+	nsapi_error_t status = MBED_CONF_APP_TEST_SOCKET_CONNECT
+#else
+	nsapi_error_t status = net.connect();
+#endif
+
+	// Must have IP address.
+	TEST_ASSERT_NOT_EQUAL(net.get_ip_address(), NULL);
+	// Connection must be successful.
+	TEST_ASSERT_EQUAL(status, 0);
+
+	if (status == 0 && net.get_ip_address() != NULL) {
+		printf("Connected to network successfully. IP address: %s\n", net.get_ip_address());
+	}
+
+	SimpleMbedCloudClient client(&net, &bd, &fs);
+
+	// SimpleMbedCloudClient initialization must be successful.
+	int client_status = client.init();
+	TEST_ASSERT_EQUAL(client_status, 0);
+	if (client_status == 0) {
+		printf("Simple Mbed Cloud Client initialization successful. \r\n");
+	}
+
+	// Registration to Mbed Cloud must be successful.
+	timeout = 5000;
+
+	client.on_registered(&registered);
+	client.register_and_connect();
+
+	while (timeout && !client.is_client_registered()) {
+		timeout--;
+		wait(1);
+	}
+
+	TEST_ASSERT_TRUE(client.is_client_registered());
+	if (client.is_client_registered()) {
+		printf("Simple Mbed Cloud Client successfully registered to Mbed Cloud.\r\n");
+	}
+
+	// Close connection
+	net.disconnect();
 }
 
 utest::v1::status_t greentea_setup(const size_t number_of_cases)
