@@ -30,9 +30,16 @@ void registered(const ConnectorClientEndpointInfo *endpoint) {
 
 void smcc_register(void){
 
+    int iteration = 0;
+
 	int timeout = 0;
 	char _key[20] = {};
 	char _value[128] = {};
+
+    greentea_send_kv("device_ready", true);
+    greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
+
+    iteration = atoi(_value);
 
 	// Storage definition.
 #if defined(MBED_CONF_APP_TEST_BLOCK_DEVICE_OBJECT)
@@ -58,24 +65,35 @@ void smcc_register(void){
 	// Must have IP address.
 	TEST_ASSERT_NOT_EQUAL(net.get_ip_address(), NULL);
 	if (net.get_ip_address() == NULL) {
-		printf("ERROR: No IP address obtained from network.");
+		printf("[ERROR] No IP address obtained from network.\r\n");
+		greentea_send_kv("fail_test", 0);
 	}
 	// Connection must be successful.
 	TEST_ASSERT_EQUAL(status, 0);
 	if (status == 0 && net.get_ip_address() != NULL) {
-		printf("Connected to network successfully. IP address: %s\n", net.get_ip_address());
+		printf("[INFO] Connected to network successfully. IP address: %s\n", net.get_ip_address());
+	} else {
+	    printf("[ERROR] Failed to connect to network.\r\n");
+	    greentea_send_kv("fail_test", 0);
 	}
 
 	SimpleMbedCloudClient client(&net, &bd, &fs);
+
+    if (iteration == 0) {
+        printf("[INFO] Resetting storage to a clean state for test.\n");
+        client.reformat_storage();
+    }
 
 	// SimpleMbedCloudClient initialization must be successful.
 	int client_status = client.init();
 	TEST_ASSERT_EQUAL(client_status, 0);
 	if (client_status == 0) {
-		printf("Simple Mbed Cloud Client initialization successful. \r\n");
+		printf("[INFO] Simple Mbed Cloud Client initialization successful. \r\n");
+	} else {
+	    printf("[ERROR] Simple Mbed Cloud Client failed to initialize.\r\n");
+	    greentea_send_kv("fail_test", 0);
 	}
 
-	// Registration to Mbed Cloud must be successful.
 	client.on_registered(&registered);
 	client.register_and_connect();
 
@@ -85,50 +103,76 @@ void smcc_register(void){
 		wait_ms(1);
 	}
 
+    // Registration to Mbed Cloud must be successful.
 	TEST_ASSERT_TRUE(client.is_client_registered());
-	if (client.is_client_registered()) {
-		printf("Simple Mbed Cloud Client successfully registered to Mbed Cloud.\r\n");
+	if (!client.is_client_registered()) {
+	    printf("[ERROR] Device failed to register.\r\n");
+	    greentea_send_kv("fail_test", 0);
+	} else {
+	    printf("[INFO] Simple Mbed Cloud Client successfully registered to Mbed Cloud.\r\n");
 	}
 
-	// Allow 500ms for Mbed Cloud to update the device directory.
+    // Allow 500ms for Mbed Cloud to update the device directory.
     timeout = 500;
     while (timeout) {
-    	timeout--;
-    	wait_ms(1);
+        timeout--;
+        wait_ms(1);
     }
 
-    // Start host tests with device id
-    printf("Starting Mbed Cloud verification using Python SDK...\r\n");
-    greentea_send_kv("device_api_registration", endpointInfo->internal_endpoint_name.c_str());
+    if (iteration == 0) {
+        // Start host tests with device id
+        printf("[INFO] Starting Mbed Cloud verification using Python SDK...\r\n");
+        greentea_send_kv("device_api_registration", endpointInfo->internal_endpoint_name.c_str());
 
-    // Wait for Host Test and API response (blocking here)
-    greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
+        // Wait for Host Test and API response (blocking here)
+        greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
-    // Ensure the state is 'registered' in the Device Directory
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("registered", _value, "Device is registered.");
+        // Ensure the state is 'registered' in the Device Directory
+        TEST_ASSERT_EQUAL_STRING("registered", _value);
+        if (strcmp(_value, "registered") != 0) {
+            printf("[ERROR] Device could not be verified as registered in Device Directory.\r\n");
+            greentea_send_kv("fail_test", 0);
+        } else {
+            printf("[INFO] Device is registered in the Device Directory.\r\n");
+        }
 
-    // Deregister from Mbed Cloud
+    } else {
+        printf("Verifying consistent endpoint...\r\n");
+        greentea_send_kv("device_verification", endpointInfo->internal_endpoint_name.c_str());
+
+        // Wait for Host Test to verify consistent device ID (blocking here)
+        greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
+        TEST_ASSERT_EQUAL_STRING("True", _value);
+        if (strcmp(_value, "True") != 0) {
+            printf("[ERROR] Device ID is inconsistent. SOTP and Secure Storage was not preserved.\r\n");
+            greentea_send_kv("fail_test", 0);
+        } else {
+            printf("[INFO] Device ID consistent, SOTP and Secure Storage is preserved correctly.\r\n");
+        }
+    }
+
+    // Deregister from Mbed Cloud and disconnect network interface.
     client.client_unregistered();
     client.close();
+    net.disconnect();
 
-	// Close connection
-	net.disconnect();
+    // Reset on first iteration of test.
+    if (iteration == 0) {
+        printf("[INFO] Resetting device.\r\n");
+        greentea_send_kv("advance_test", 0);
+        greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
+        if (strcmp(_key, "reset") == 0) {
+            system_reset();
+        }
+    } else {
+        greentea_send_kv("advance_test", 0);
+    }
 }
 
-utest::v1::status_t greentea_setup(const size_t number_of_cases)
+int main(void)
 {
+    GREENTEA_SETUP(120, "sdk_host_tests");
+    smcc_register();
 
-    GREENTEA_SETUP(30*60, "sdk_host_tests");
-    return greentea_test_setup_handler(number_of_cases);
-}
-
-Case cases[] = {
-    Case("Simple Cloud Client Register", smcc_register),
-};
-
-Specification specification(greentea_setup, cases);
-
-int main()
-{
-    return !Harness::run(specification);
+    return 0;
 }
