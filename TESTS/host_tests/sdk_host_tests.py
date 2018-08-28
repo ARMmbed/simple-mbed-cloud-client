@@ -97,7 +97,7 @@ class SDKTests(BaseHostTest):
         
         # Setup API config
         api_key_val = os.environ.get("MBED_CLOUD_API_KEY")            
-        api_config = {"api_key" : api_key_val, "host" : "https://api-os2.mbedcloudstaging.net"}
+        api_config = {"api_key" : api_key_val, "host" : "https://api.us-east-1.mbedcloud.com"}
         
         # Instantiate Device API
         self.deviceApi = DeviceDirectoryAPI(api_config)
