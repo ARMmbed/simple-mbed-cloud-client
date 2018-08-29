@@ -6,6 +6,7 @@ A simple way of connecting Mbed OS 5 devices to Mbed Cloud. It's designed to:
 * Run separate from your main application, it does not take over your main loop.
 * Provide LWM2M resources, essentially variables that are automatically synced through Mbed Cloud Connect.
 * Help users avoid doing blocking network operations in interrupt contexts, by automatically defering actions to a separate thread.
+* Provide end to end Greentea tests for Mbed Cloud Client
 
 This library is a simpler interface to Mbed Cloud Client, making it trivial to expose sensors, actuators and other variables to the cloud. For a full Mbed Cloud CLient API, check our [documentation](https://cloud.mbed.com/docs/current/mbed-cloud-client/index.html).
 
@@ -55,6 +56,16 @@ This library is a simpler interface to Mbed Cloud Client, making it trivial to e
   There are a number of applications that make usage of the Simple Mbed Cloud Client library.
   
   The Mbed Cloud [Quick-Start](https://cloud.mbed.com/quick-start) is an initiative to support Mbed Partner's platforms while delivering a great User Experience to Mbed Developers.  
+
+### Testing
+
+Simple Mbed Cloud Client provides Greentea tests to test your Simple Mbed Cloud Client porting efforts. For detailed instructions on how to run the Simple Mbed Cloud Client Tests, see [simple-mbed-cloud-client-template-restricted](https://github.com/armmbed/simple-mbed-cloud-client-template-restricted).
+
+| **Test Name** | **Description** |
+| ------------- | ------------- |
+| `simple-connect` | Tests that the device successfully registers to Mbed Cloud using the specified storage, SOTP, and connectivity configuration. Tests that SOTP and the RoT is preserved over a reset and the device connects with a consistent device ID.  |
+
+
 
 ### Known issues
 
