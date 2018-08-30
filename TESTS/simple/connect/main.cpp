@@ -109,8 +109,7 @@ void smcc_register(void) {
         printf("[ERROR] Device failed to register.\r\n");
         greentea_send_kv("fail_test", 0);
     } else {
-        printf(
-                "[INFO] Simple Mbed Cloud Client successfully registered to Mbed Cloud.\r\n");
+        printf("[INFO] Simple Mbed Cloud Client successfully registered to Mbed Cloud.\r\n");
     }
 
     // Allow 500ms for Mbed Cloud to update the device directory.
