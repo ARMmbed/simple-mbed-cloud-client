@@ -87,7 +87,7 @@ Simple Mbed Cloud Client provides Greentea tests to test your Simple Mbed Cloud 
 },
 "test-socket-object": {
     "help": "Instantiation of network interface statement for SMCC tests. (variable name must be net)",
-    "value": "EthernetInterface net"
+    "value": "EthernetInterface net;"
 },
 "test-socket-connect": {
     "help": "Network socket connect statement for SMCC tests.",
