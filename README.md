@@ -154,6 +154,13 @@ When this occurs, you should look at the SOTP sectors defined in `mbed_app.json`
 ```
 Ensure that the sectors are correct according to the flash layout of your device, and they are not being overwritten during the programming of the device. ST-Link devices will overwrite these sectors when using drag-and-drop of .bin files. Thus, moving the SOTP sectors to the end sectors of flash ensure that they will not be overwritten.
 
+#### Stack Overflow
+If you receive a stack overflow error, increase the Mbed OS main stack size to at least 6000. This can be done by modifying the following parameter in `mbed_app.json`:
+```
+ "MBED_CONF_APP_MAIN_STACK_SIZE=6000",
+```
+
+
 ### Known issues
 
 None
