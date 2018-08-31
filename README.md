@@ -124,6 +124,35 @@ For more examples and a template `mbed_app.json`, see [simple-mbed-cloud-client-
 
 5. Run the Simple Mbed Cloud Client tests from the application directory: 
  ` mbed test -m <platform> -t <toolchain> --app-config mbed_app.json -n simple-mbed-cloud-client-tests-*`
+ 
+### Troubleshooting
+Below are a list of common issues and fixes for using Simple Mbed Cloud Client.
+
+#### Autoformatting failed with error -5005
+This is due to an issue with the storage block device. If using an SD card, ensure that the SD card is seated properly.
+
+#### SYNC_FAILED during testing
+Occasionally, if the test failed during a previous attempt, the SMCC Greentea tests will fail to sync. If this is the case, please replug your device to the host PC. Additionally, you may need to update your DAPLink or ST-Link interface firmware.
+
+#### Device identity is inconsistent
+If your device ID in Mbed Cloud is inconsistent over a device reset, it could be because it is failing to open the credentials on the storage held in the Enhanced Secure File System. Typically, this is because the device cannot access the Root of Trust stored in SOTP.
+
+One way to verify this is to see if Simple Mbed Cloud Client autoformats the storage after a device reset when `format-storage-layer-on-error` is set to `1` in `mbed_app.json`.  It would appear on the serial terminal output from the device as the following:
+```
+[Simple Cloud Client] Initializing storage.
+[Simple Cloud Client] Autoformatting the storage.
+[Simple Cloud Client] Reset storage to an empty state.
+[Simple Cloud Client] Starting developer flow
+```
+
+When this occurs, you should look at the SOTP sectors defined in `mbed_app.json`:
+```
+"sotp-section-1-address"           : "0xFE000",
+"sotp-section-1-size"              : "0x1000",
+"sotp-section-2-address"           : "0xFF000",
+"sotp-section-2-size"              : "0x1000",
+```
+Ensure that the sectors are correct according to the flash layout of your device, and they are not being overwritten during the programming of the device. ST-Link devices will overwrite these sectors when using drag-and-drop of .bin files. Thus, moving the SOTP sectors to the end sectors of flash ensure that they will not be overwritten.
 
 ### Known issues
 
