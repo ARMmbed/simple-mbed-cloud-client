@@ -160,6 +160,9 @@ If you receive a stack overflow error, increase the Mbed OS main stack size to a
  "MBED_CONF_APP_MAIN_STACK_SIZE=6000",
 ```
 
+#### Device failed to register
+Check the device allocation on your Mbed Cloud account to see if you are allowed additional devices to connect. You can delete development devices, after being deleted they will not count towards your allocation.
+
 
 ### Known issues
 
