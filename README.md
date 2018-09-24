@@ -88,8 +88,6 @@ Simple Pelion Client provides Greentea tests to test your porting efforts.
 
 1. If your platform does not have a default storage component in `targets.json`, you can define this in `mbed_app.json`. Aditionally, you may want to double-check the storage pinout configuration for your platform in the `mbed_lib.json` file in `mbed-os/components/storage/blockdevice/`.
    
-
-```
 For examples of platform configuration, see the applications available in the [Quick-start](https://cloud.mbed.com/quick-start).
 
 1. You may need to delete your `main.cpp`.
