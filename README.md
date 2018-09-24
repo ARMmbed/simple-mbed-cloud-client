@@ -1,4 +1,6 @@
-# Simple Mbed Cloud Client
+# Simple Pelion Device Management Client
+
+(aka Simple Mbed Cloud Client)
 
 A simple way of connecting Mbed OS 5 devices to Mbed Cloud. It's designed to:
 
@@ -18,9 +20,9 @@ This library is a simpler interface to Mbed Cloud Client, making it trivial to e
     $ mbed add https://github.com/ARMmbed/simple-mbed-cloud-client
     ```
 
-1. Add your Mbed Cloud developer certificate to your project (`mbed_cloud_dev_credentials.c` file).
+2. Add your Mbed Cloud developer certificate to your project (`mbed_cloud_dev_credentials.c` file).
 
-1. Reference the library from your main.cpp file, add network and storage drivers; finally initialize the Simple Mbed Cloud Client library.
+3. Reference the library from your main.cpp file, add network and storage drivers; finally initialize the Simple Mbed Cloud Client library.
 
     ```cpp
     #include "simple-mbed-cloud-client.h"
@@ -79,36 +81,20 @@ Simple Mbed Cloud Client provides Greentea tests to test your Simple Mbed Cloud 
 
  2. Set an environment variable on the host machine called `MBED_CLOUD_API_KEY` which is valid for the account that your device will connect to. For instructions on how to generate an API key, please [see the documentation](https://cloud.mbed.com/docs/current/integrate-web-app/api-keys.html#generating-an-api-key).
 
- 3. In your reference application, change the following parameters in `mbed_app.json` to the parameters specific to your platform:
+ 3. If your platform does not have a default network interface in `targets.json`, you can define this in `mbed_app.json`, for example:
  ```json
 "target.network-default-interface-type": "ETHERNET",
-"test-block-device-header-file": {
-    "help": "Name of block device for SMCC tests.",
-    "value": "\"SDBlockDevice.h\""
-},
-"test-block-device-object": {
-    "help": "Block device instantiation for SMCC tests. (variable name must be bd)",
-    "value": "SDBlockDevice bd(MBED_CONF_APP_SPI_MOSI, MBED_CONF_APP_SPI_MISO, MBED_CONF_APP_SPI_CLK, MBED_CONF_APP_SPI_CS);"
-}
 ```
-For example, to run the Simple Mbed Cloud Client tests on a `UBLOX_EVK_ODIN_W2`, you would add the following configuration in `target_overrides`:
- ```json
-"target_overrides": {
-    "UBLOX_EVK_ODIN_W2": {
-        "app.sotp-section-1-address"    : "(0x081C0000)",
-        "app.sotp-section-1-size"       : "(128*1024)",
-        "app.sotp-section-2-address"    : "(0x081E0000)",
-        "app.sotp-section-2-size"       : "(128*1024)",
-        "test-block-device-header-file" : "\"SDBlockDevice.h\"",
-        "test-block-device-object"      : "SDBlockDevice bd(D11, D12, D13, D9);"
-    }
-}
+
+1. If your platform does not have a default storage component in `targets.json`, you can define this in `mbed_app.json`. Aditionally, you may want to double-check the storage pinout configuration for your platform in the `mbed_lib.json` file in `mbed-os/components/storage/blockdevice/`.
+   
+
 ```
-For more examples and a template `mbed_app.json`, see [simple-mbed-cloud-client-template-restricted](https://github.com/ARMmbed/simple-mbed-cloud-client-template-restricted).
+For examples of platform configuration, see the applications available in the [Quick-start](https://cloud.mbed.com/quick-start).
 
-4. You may need to delete your `main.cpp`.
+1. You may need to delete your `main.cpp`.
 
-5. Run the Simple Mbed Cloud Client tests from the application directory:
+2. Run the Simple Mbed Cloud Client tests from the application directory:
  ` mbed test -t <toolchain> -m <platform> --app-config mbed_app.json -n simple-mbed-cloud-client-tests-*`
 
 ### Troubleshooting
