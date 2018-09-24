@@ -6,19 +6,11 @@
 #include "unity/unity.h"
 #include "greentea-client/test_env.h"
 
-#if defined(MBED_CONF_APP_TEST_CONNECT_HEADER_FILE)
-#include MBED_CONF_APP_TEST_CONNECT_HEADER_FILE
-#else
-#include "EthernetInterface.h"
-#endif
-
-#if defined(MBED_CONF_APP_TEST_BLOCK_DEVICE_HEADER_FILE)
-#include MBED_CONF_APP_TEST_BLOCK_DEVICE_HEADER_FILE
-#else
-#include "SDBlockDevice.h"
-#endif
-
 using namespace utest::v1;
+
+// Default storage definition.
+BlockDevice* bd = BlockDevice::get_default_instance();
+FATFileSystem fs("sd", bd);
 
 static const ConnectorClientEndpointInfo* endpointInfo;
 void registered(const ConnectorClientEndpointInfo *endpoint) {
@@ -38,15 +30,6 @@ void smcc_register(void) {
     greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
     iteration = atoi(_value);
-
-    // Storage definition.
-#if defined(MBED_CONF_APP_TEST_BLOCK_DEVICE_OBJECT)
-    MBED_CONF_APP_TEST_BLOCK_DEVICE_OBJECT
-#else
-    SDBlockDevice bd(MBED_CONF_APP_SPI_MOSI, MBED_CONF_APP_SPI_MISO,
-            MBED_CONF_APP_SPI_CLK, MBED_CONF_APP_SPI_CS);
-#endif
-    FATFileSystem fs("sd", &bd);
 
     // Connection definition.
 #if MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == "ETHERNET"
@@ -77,7 +60,7 @@ void smcc_register(void) {
         greentea_send_kv("fail_test", 0);
     }
 
-    SimpleMbedCloudClient client(net, &bd, &fs);
+    SimpleMbedCloudClient client(net, bd, &fs);
 
     if (iteration == 0) {
         printf("[INFO] Resetting storage to a clean state for test.\n");
