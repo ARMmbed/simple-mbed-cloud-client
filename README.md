@@ -22,7 +22,7 @@ This library is a simpler interface to Mbed Cloud Client, making it trivial to e
 
 2. Add your Mbed Cloud developer certificate to your project (`mbed_cloud_dev_credentials.c` file).
 
-3. Reference the library from your main.cpp file, add network and storage drivers; finally initialize the Simple Mbed Cloud Client library.
+3. Reference the library from your main.cpp file, add network and storage drivers; finally initialize the Simple Pelion Client library. The is the architecture of a generic Simple Pelion Client application:
 
     ```cpp
     #include "simple-mbed-cloud-client.h"
@@ -40,7 +40,7 @@ This library is a simpler interface to Mbed Cloud Client, making it trivial to e
         <Block device> sd(...);
         <Filesystem> fs("sd", &sd);
 
-        /* Initialize Simple Mbed Cloud Client */
+        /* Initialize Simple Pelion Client */
         SimpleMbedCloudClient client(&net, &sd, &fs);
         client.init();
 
@@ -55,13 +55,13 @@ This library is a simpler interface to Mbed Cloud Client, making it trivial to e
 
 ## Example applications
 
-  There are a number of applications that make usage of the Simple Mbed Cloud Client library.
+  There are a number of applications that make usage of the Simple Pelion Client library.
 
   The Mbed Cloud [Quick-Start](https://cloud.mbed.com/quick-start) is an initiative to support Mbed Partner's platforms while delivering a great User Experience to Mbed Developers.
 
 ## Testing
 
-Simple Mbed Cloud Client provides Greentea tests to test your Simple Mbed Cloud Client porting efforts.
+Simple Pelion Client provides Greentea tests to test your porting efforts.
 
 ### Tests
 
@@ -70,7 +70,7 @@ Simple Mbed Cloud Client provides Greentea tests to test your Simple Mbed Cloud 
 | `simple-connect` | Tests that the device successfully registers to Mbed Cloud using the specified storage, SOTP, and connectivity configuration. Tests that SOTP and the RoT is preserved over a reset and the device connects with a consistent device ID.  |
 
 ### Requirements
- Simple Mbed Cloud Client tests rely on the Python SDK to test the end to end solution.
+ Simple Pelion Client tests rely on the Python SDK to test the end to end solution.
  To install the Python SDK:
 `pip install mbed-cloud-sdk`
  **Note:** The Python SDK requires Python 2.7.10+ / Python 3.4.3+, built with SSL support.
@@ -94,11 +94,11 @@ For examples of platform configuration, see the applications available in the [Q
 
 1. You may need to delete your `main.cpp`.
 
-2. Run the Simple Mbed Cloud Client tests from the application directory:
+2. Run the Simple Pelion Client tests from the application directory:
  ` mbed test -t <toolchain> -m <platform> --app-config mbed_app.json -n simple-mbed-cloud-client-tests-*`
 
 ### Troubleshooting
-Below are a list of common issues and fixes for using Simple Mbed Cloud Client.
+Below are a list of common issues and fixes for using Simple Pelion Client.
 
 #### Autoformatting failed with error -5005
 This is due to an issue with the storage block device. If using an SD card, ensure that the SD card is seated properly.
@@ -109,12 +109,12 @@ Occasionally, if the test failed during a previous attempt, the SMCC Greentea te
 #### Device identity is inconsistent
 If your device ID in Mbed Cloud is inconsistent over a device reset, it could be because it is failing to open the credentials on the storage held in the Enhanced Secure File System. Typically, this is because the device cannot access the Root of Trust stored in SOTP.
 
-One way to verify this is to see if Simple Mbed Cloud Client autoformats the storage after a device reset when `format-storage-layer-on-error` is set to `1` in `mbed_app.json`.  It would appear on the serial terminal output from the device as the following:
+One way to verify this is to see if Simple Pelion Client autoformats the storage after a device reset when `format-storage-layer-on-error` is set to `1` in `mbed_app.json`.  It would appear on the serial terminal output from the device as the following:
 ```
-[Simple Cloud Client] Initializing storage.
-[Simple Cloud Client] Autoformatting the storage.
-[Simple Cloud Client] Reset storage to an empty state.
-[Simple Cloud Client] Starting developer flow
+[SMCC] Initializing storage.
+[SMCC] Autoformatting the storage.
+[SMCC] Reset storage to an empty state.
+[SMCC] Starting developer flow
 ```
 
 When this occurs, you should look at the SOTP sectors defined in `mbed_app.json`:
