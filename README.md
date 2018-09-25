@@ -67,7 +67,7 @@ Simple Pelion Client provides Greentea tests to test your porting efforts.
 
 | **Test Name** | **Description** |
 | ------------- | ------------- |
-| `simple-connect` | Tests that the device successfully registers to Mbed Cloud using the specified storage, SOTP, and connectivity configuration. Tests that SOTP and the RoT is preserved over a reset and the device connects with a consistent device ID.  |
+| `simple-connect` | - Tests that the device successfully registers to Mbed Cloud using the specified storage, SOTP, and connectivity configuration. <br> - Tests that SOTP and the RoT is preserved over a reset and the device connects with a consistent device ID. <br> |
 
 ### Requirements
  Simple Pelion Client tests rely on the Python SDK to test the end to end solution.
@@ -77,23 +77,24 @@ Simple Pelion Client provides Greentea tests to test your porting efforts.
 
  ### Setup
 
- 1. Include the `mbed_cloud_dev_credentials.c` developer certificate in your application. For detailed instructions [see the documentation](https://cloud.mbed.com/docs/current/connecting/provisioning-development-devices.html#creating-and-downloading-a-developer-certificate).
+ 1. Import an Simple Pelion Client application that contains the corresponding configuration in `mbed_app.json`. The application will include this Simple Pelion Client library.
 
- 2. Set an environment variable on the host machine called `MBED_CLOUD_API_KEY` which is valid for the account that your device will connect to. For instructions on how to generate an API key, please [see the documentation](https://cloud.mbed.com/docs/current/integrate-web-app/api-keys.html#generating-an-api-key).
-
- 3. If your platform does not have a default network interface in `targets.json`, you can define this in `mbed_app.json`, for example:
- ```json
-"target.network-default-interface-type": "ETHERNET",
-```
-
-1. If your platform does not have a default storage component in `targets.json`, you can define this in `mbed_app.json`. Aditionally, you may want to double-check the storage pinout configuration for your platform in the `mbed_lib.json` file in `mbed-os/components/storage/blockdevice/`.
+    For examples of platform configuration, see the applications available in the [Quick-start](https://cloud.mbed.com/quick-start).
    
-For examples of platform configuration, see the applications available in the [Quick-start](https://cloud.mbed.com/quick-start).
+ 2. Include the `mbed_cloud_dev_credentials.c` developer certificate in your application. For detailed instructions [see the documentation](https://cloud.mbed.com/docs/current/connecting/provisioning-development-devices.html#creating-and-downloading-a-developer-certificate).
 
-1. You may need to delete your `main.cpp`.
+ 3. Set an `mbed config` variable `CLOUD_SDK_API_KEY` on the host machine valid for the account that your device will connect to. For example:
 
-2. Run the Simple Pelion Client tests from the application directory:
- ` mbed test -t <toolchain> -m <platform> --app-config mbed_app.json -n simple-mbed-cloud-client-tests-*`
+     ```mbed config -G CLOUD_SDK_API_KEY <API_KEY>```
+
+     For instructions on how to generate an API key, please [see the documentation](https://cloud.mbed.com/docs/current/integrate-web-app/api-keys.html#generating-an-api-key).
+
+   
+ 4. You may need to delete your `main.cpp`.
+
+ 5. Run the Simple Pelion Client tests from the application directory:
+
+     ```mbed test -t <toolchain> -m <platform> --app-config mbed_app.json -n simple-mbed-cloud-client-tests-*```
 
 ### Troubleshooting
 Below are a list of common issues and fixes for using Simple Pelion Client.
