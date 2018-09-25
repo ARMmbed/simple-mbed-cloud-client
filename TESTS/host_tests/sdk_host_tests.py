@@ -105,7 +105,7 @@ class SDKTests(BaseHostTest):
             return -1
 
         result = str(result).split(' ')
-        if len(result) == 0:
+        if result[1] == "No":
             print "Error: MBED_CLOUD_SDK_CONFIG global config is not set."
             return -1
 
