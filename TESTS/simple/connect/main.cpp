@@ -43,6 +43,9 @@ void smcc_register(void) {
     ccellular->set_sim_pin(MBED_CONF_NSAPI_DEFAULT_CELLULAR_SIM_PIN);
     cellular->set_credentials(MBED_CONF_NSAPI_DEFAULT_CELLULAR_APN, MBED_CONF_NSAPI_DEFAULT_CELLULAR_USERNAME, MBED_CONF_NSAPI_DEFAULT_CELLULAR_PASSWORD);
     nsapi_error_t status = net->connect();
+#elif MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == MESH
+    MeshInterface *net = MeshInterface::get_default_instance();;
+    nsapi_error_t status = net->connect();
 #else
     #error "Default network interface not defined"
 #endif
