@@ -2,17 +2,17 @@
 
 (aka Simple Mbed Cloud Client)
 
-A simple way of connecting Mbed OS 5 devices to Mbed Cloud. It's designed to:
+A simple way of connecting Mbed OS 5 devices to Arm Pelion Device Management. It's designed to:
 
-* Enable Mbed Cloud Connect and mbed Cloud Update to applications in few lines of code.
+* Enables applications to connect and perform firmware updates in few lines of code.
 * Run separate from your main application, it does not take over your main loop.
-* Provide LWM2M resources, essentially variables that are automatically synced through Mbed Cloud Connect.
+* Provide LWM2M resources, essentially variables that are automatically synced through Pelion Client.
 * Help users avoid doing blocking network operations in interrupt contexts, by automatically defering actions to a separate thread.
-* Provide end to end Greentea tests for Mbed Cloud Client
+* Provide end to end Greentea tests for Pelion Client
 
-This library is a simpler interface to Mbed Cloud Client, making it trivial to expose sensors, actuators and other variables to the cloud. For a full Mbed Cloud CLient API, check our [documentation](https://cloud.mbed.com/docs/current/mbed-cloud-client/index.html).
+This library is a simpler interface to Pelion Cloud Client, making it trivial to expose sensors, actuators and other variables to the cloud. For a full Pelion CLient API, check our [documentation](https://cloud.mbed.com/docs/current/mbed-cloud-client/index.html).
 
-## Usage to Connect to Mbed Cloud
+## Usage to Connect to Pelion Device Management
 
 1. Add this library to your Mbed OS project:
 
@@ -20,7 +20,7 @@ This library is a simpler interface to Mbed Cloud Client, making it trivial to e
     $ mbed add https://github.com/ARMmbed/simple-mbed-cloud-client
     ```
 
-2. Add your Mbed Cloud developer certificate to your project (`mbed_cloud_dev_credentials.c` file).
+2. Add your Pelion developer certificate to your project (`mbed_cloud_dev_credentials.c` file).
 
 3. Reference the library from your main.cpp file, add network and storage drivers; finally initialize the Simple Pelion Client library. The is the architecture of a generic Simple Pelion Client application:
 
@@ -57,7 +57,7 @@ This library is a simpler interface to Mbed Cloud Client, making it trivial to e
 
   There are a number of applications that make usage of the Simple Pelion Client library.
 
-  The Mbed Cloud [Quick-Start](https://cloud.mbed.com/quick-start) is an initiative to support Mbed Partner's platforms while delivering a great User Experience to Mbed Developers.
+  The Pelion [Quick-Start](https://cloud.mbed.com/quick-start) is an initiative to support Mbed Partner's platforms while delivering a great User Experience to Mbed Developers.
 
 ## Testing
 
@@ -67,7 +67,7 @@ Simple Pelion Client provides Greentea tests to test your porting efforts.
 
 | **Test Name** | **Description** |
 | ------------- | ------------- |
-| `simple-connect` | - Tests that the device successfully registers to Mbed Cloud using the specified storage, SOTP, and connectivity configuration. <br> - Tests that SOTP and the RoT is preserved over a reset and the device connects with a consistent device ID. <br> |
+| `simple-connect` | - Tests that the device successfully registers to Pelion Device Management using the specified storage, SOTP, and connectivity configuration. <br> - Tests that SOTP and the RoT is preserved over a reset and the device connects with a consistent device ID. <br> |
 
 ### Requirements
  Simple Pelion Client tests rely on the Python SDK to test the end to end solution.
@@ -106,7 +106,7 @@ This is due to an issue with the storage block device. If using an SD card, ensu
 Occasionally, if the test failed during a previous attempt, the SMCC Greentea tests will fail to sync. If this is the case, please replug your device to the host PC. Additionally, you may need to update your DAPLink or ST-Link interface firmware.
 
 #### Device identity is inconsistent
-If your device ID in Mbed Cloud is inconsistent over a device reset, it could be because it is failing to open the credentials on the storage held in the Enhanced Secure File System. Typically, this is because the device cannot access the Root of Trust stored in SOTP.
+If your device ID in Pelion Device Management is inconsistent over a device reset, it could be because it is failing to open the credentials on the storage held in the Enhanced Secure File System. Typically, this is because the device cannot access the Root of Trust stored in SOTP.
 
 One way to verify this is to see if Simple Pelion Client autoformats the storage after a device reset when `format-storage-layer-on-error` is set to `1` in `mbed_app.json`.  It would appear on the serial terminal output from the device as the following:
 ```
@@ -132,9 +132,9 @@ If you receive a stack overflow error, increase the Mbed OS main stack size to a
 ```
 
 #### Device failed to register
-Check the device allocation on your Mbed Cloud account to see if you are allowed additional devices to connect. You can delete development devices, after being deleted they will not count towards your allocation.
+Check the device allocation on your Pelion account to see if you are allowed additional devices to connect. You can delete development devices, after being deleted they will not count towards your allocation.
 
 
 ### Known issues
 
-None
+Check open issues on [GitHub](https://github.com/ARMmbed/simple-mbed-cloud-client/issues)
