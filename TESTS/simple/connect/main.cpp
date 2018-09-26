@@ -140,10 +140,6 @@ void smcc_register(void) {
         }
     }
 
-    // Deregister from Mbed Cloud and disconnect network interface.
-    client.close();
-    net->disconnect();
-
     // Reset on first iteration of test.
     if (iteration == 0) {
         printf("[INFO] Resetting device.\r\n");
