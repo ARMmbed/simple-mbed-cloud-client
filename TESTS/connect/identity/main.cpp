@@ -19,12 +19,7 @@ void registered(const ConnectorClientEndpointInfo *endpoint) {
     endpointInfo = endpoint;
 }
 
-void post_test_callback(MbedCloudClientResource *resource, const uint8_t *buffer, uint16_t size) {
-    printf("[INFO] POST test callback executed. \r\n");
-    greentea_send_kv("device_lwm2m_post_test_result", 0);
-}
-
-void smcc_register(void) {
+void smcc_identity(void) {
 
     int iteration = 0;
     int timeout = 0;
@@ -89,23 +84,6 @@ void smcc_register(void) {
         greentea_send_kv("fail_test", 0);
     }
 
-    //Create LwM2M resources
-    MbedCloudClientResource *res_get_test;
-    res_get_test = client.create_resource("5000/0/1", "get_resource");
-    res_get_test->observable(true);
-    res_get_test->methods(M2MMethod::GET);
-    res_get_test->set_value("test0");
-
-    MbedCloudClientResource *res_put_test;
-    res_put_test = client.create_resource("5000/0/2", "put_resource");
-    res_put_test->methods(M2MMethod::PUT | M2MMethod::GET);
-    res_put_test->set_value(1);
-
-    MbedCloudClientResource *res_post_test;
-    res_post_test = client.create_resource("5000/0/3", "post_resource");
-    res_post_test->methods(M2MMethod::POST);
-    res_post_test->attach_post_callback(post_test_callback);
-
     client.on_registered(&registered);
     client.register_and_connect();
 
@@ -161,65 +139,6 @@ void smcc_register(void) {
         } else {
             printf("[INFO] Device ID consistent, SOTP and Secure Storage is preserved correctly.\r\n");
         }
-
-        // LwM2M tests
-        printf("[INFO] Beginning LwM2M resource tests.\r\n");
-        int current_res_value;
-        int updated_res_value;
-
-        // Read orignal value of /5000/0/1
-        greentea_send_kv("device_lwm2m_get_test", "/5000/0/1");
-        greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
-        TEST_ASSERT_EQUAL_STRING("test0", _value);
-        if (strcmp(_value, "test0") != 0) {
-            printf("[ERROR] Wrong value reported in Pelion DM.\r\n");
-            greentea_send_kv("fail_test", 0);
-        } else {
-            printf("[INFO] Original value of LwM2M resource /5000/0/1 is read correctly. \r\n");
-        }
-
-        // Update resource /5000/0/1 from client and observe value
-        greentea_send_kv("device_lwm2m_get_test", "/5000/0/1");
-        res_get_test->set_value("test1");
-        greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
-        TEST_ASSERT_EQUAL_STRING("test1", _value);
-        if (strcmp(_value, "test1") != 0) {
-            printf("[ERROR] Wrong value observed from Pelion DM.\r\n");
-            greentea_send_kv("fail_test", 0);
-        } else {
-            printf("[INFO] Changed value of LwM2M resource /5000/0/1 is observed correctly. \r\n");
-        }
-
-        // Observe resource /5000/0/2 from cloud, add +10, and confirm value is correct on client
-        greentea_send_kv("device_lwm2m_put_test", "/5000/0/2");
-        greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
-
-        // Get current value and updated value
-        updated_res_value = atoi(_value);
-        current_res_value = res_put_test->get_value_int();
-
-        // Ensure current value and updated value are equal
-        TEST_ASSERT_EQUAL(updated_res_value, current_res_value);
-        if (updated_res_value != current_res_value) {
-            printf("[ERROR] Wrong value read from device after resource update.\r\n");
-            greentea_send_kv("fail_test", 0);
-        } else {
-            printf("[INFO] Value of resource /5000/0/2 successfully changed from the cloud using PUT. \r\n");
-        }
-
-        printf("[INFO] Executing POST on /5000/0/3 and waiting for callback function.");
-        greentea_send_kv("device_lwm2m_post_test", "/5000/0/3");
-        greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
-
-        // Ensure that callback is executed. If not, test fails.
-        result = atoi(_value);
-        TEST_ASSERT_EQUAL(0, result);
-        if (result != 0) {
-            printf("[ERROR] POST callback execution failed on resource /5000/0/3. \r\n");
-            greentea_send_kv("fail_test", 0);
-        } else {
-            printf("[INFO] POST callback executed successfully /5000/0/3 \r\n");
-        }
     }
 
     // Reset on first iteration of test.
@@ -238,7 +157,7 @@ void smcc_register(void) {
 
 int main(void) {
     GREENTEA_SETUP(150, "sdk_host_tests");
-    smcc_register();
+    smcc_identity();
 
     return 0;
 }

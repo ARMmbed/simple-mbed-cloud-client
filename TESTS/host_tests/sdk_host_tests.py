@@ -82,15 +82,18 @@ class SDKTests(BaseHostTest):
         # Send true if old DeviceID is the same as current device is
         self.send_kv("verification", (deviceID == value))
         
-    def _callback_fail_test(self, key, value, timestamp):
-        # Test failed. End it.
-        self.notify_complete(False)
+    def _callback_complete_test(self, key, value, timestamp):
+        # Test completed. End it.
+        
+        if int(value) is not 0:
+            self.notify_complete(False)
+        else:
+            self.notify_complete(True)
         
     def _callback_device_lwm2m_get_verification(self, key, value, timestamp):
-        global deviceID
-        
+
         # Get resource value from device
-        resource_value = self.connectApi.get_resource_value(deviceID, value)
+        resource_value = self.connectApi.get_resource_value(value, '/5000/0/1')
         
         # Send resource value back to device
         self.send_kv("res_value", resource_value)
@@ -99,20 +102,19 @@ class SDKTests(BaseHostTest):
         global deviceID
         
         # Get resource value from device and increment it
-        resource_value = self.connectApi.get_resource_value(deviceID, value)
+        resource_value = self.connectApi.get_resource_value(value, '/5000/0/2')
         updated_value = int(resource_value) + 5  
         
         # Set new resource value from cloud
-        self.connectApi.set_resource_value(deviceID, value, updated_value)
+        self.connectApi.set_resource_value(value, '/5000/0/2', updated_value)
 
         # Send new resource value to device for verification.
         self.send_kv("res_set", updated_value);
         
     def _callback_device_lwm2m_post_verification(self, key, value, timestamp):
-        global deviceID
         
         # Execute POST function on device
-        resource_value = self.connectApi.execute_resource(deviceID, value)
+        resource_value = self.connectApi.execute_resource(value, '/5000/0/3')
         
     def _callback_device_lwm2m_post_verification_result(self, key, value, timestamp):
         
@@ -129,7 +131,7 @@ class SDKTests(BaseHostTest):
         self.register_callback('advance_test', self._callback_advance_test)
         self.register_callback('device_ready', self._callback_device_ready)
         self.register_callback('device_verification', self._callback_device_verification)
-        self.register_callback('fail_test', self._callback_fail_test)
+        self.register_callback('complete_test', self._callback_complete_test)
         self.register_callback('device_lwm2m_get_test', self._callback_device_lwm2m_get_verification)
         self.register_callback('device_lwm2m_put_test', self._callback_device_lwm2m_put_verification)
         self.register_callback('device_lwm2m_post_test', self._callback_device_lwm2m_post_verification)
