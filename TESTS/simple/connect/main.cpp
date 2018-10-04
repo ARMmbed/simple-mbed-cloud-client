@@ -28,6 +28,7 @@ void smcc_register(void) {
 
     int iteration = 0;
     int timeout = 0;
+    int result = -1;
     char _key[20] = { };
     char _value[128] = { };
 
@@ -35,7 +36,6 @@ void smcc_register(void) {
     greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
     iteration = atoi(_value);
-
 
     // Start network connection test.
     GREENTEA_TESTCASE_START("Connect to network");
