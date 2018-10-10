@@ -153,7 +153,6 @@ class SDKTests(BaseHostTest):
         if not resource_value.is_done:
             self.send_kv("timeout", 0)
             self.post_timeout = 1
-            
         
     def _callback_device_lwm2m_post_verification_result(self, key, value, timestamp):
         
