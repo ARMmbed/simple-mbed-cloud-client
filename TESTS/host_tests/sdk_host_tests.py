@@ -37,6 +37,10 @@ class SDKTests(BaseHostTest):
     def send_safe(self, key, value):
         #self.send_kv('dummy_start', 0)
         self.send_kv(key, value)
+        self.send_kv(key, value)
+        self.send_kv(key, value)
+        self.send_kv(key, value)
+        self.send_kv(key, value)
         #self.send_kv('dummy_end', 1)
     
     def test_steps(self):
