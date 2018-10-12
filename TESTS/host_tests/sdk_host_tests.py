@@ -36,14 +36,13 @@ class SDKTests(BaseHostTest):
     
     def test_steps(self):
         # Step 0 set up test
-        global iteration
         system_reset = yield
         
         # Step 1 device connected to Pelion should reset.
         self.send_kv('reset', 0)
         time.sleep(self.program_cycle_s)
         self.send_kv('__sync', 0)
-        iteration = iteration + 1
+        self.iteration = self.iteration + 1
         system_reset = yield   
         
         #Step 2, finish
@@ -51,8 +50,7 @@ class SDKTests(BaseHostTest):
         
     def _callback_device_ready(self, key, value, timestamp):
         # Send device iteration number after a reset
-        global iteration
-        self.send_kv('iteration', iteration)
+        self.send_kv('iteration', self.iteration)
     
     def _callback_advance_test(self, key, value, timestamp):
         # Advance test sequence
@@ -63,10 +61,9 @@ class SDKTests(BaseHostTest):
             self.notify_complete(False)
         
     def _callback_device_api_registration(self, key, value, timestamp):
-        global deviceID
         try:
             #set value for later use
-            deviceID = value
+            self.deviceID = value
             
             # Check if device is in Mbed Cloud Device Directory
             device = self.deviceApi.get_device(value)
@@ -79,20 +76,18 @@ class SDKTests(BaseHostTest):
             self.send_kv("registration_status", "error")
             
     def _callback_device_verification(self, key, value, timestamp):
-        global deviceID
         # Send true if old DeviceID is the same as current device is
-        self.send_kv("verification", (deviceID == value))
+        self.send_kv("verification", (self.deviceID == value))
         
     def _callback_fail_test(self, key, value, timestamp):
         # Test failed. End it.
         self.notify_complete(False)
         
     def _callback_device_lwm2m_get_verification(self, key, value, timestamp):
-        global deviceID
         timeout = 0
         
         # Get resource value from device
-        async_response = self.connectApi.get_resource_value_async(deviceID, value)
+        async_response = self.connectApi.get_resource_value_async(self.deviceID, value)
         
         # Set a 30 second timeout here.
         while not async_response.is_done and timeout <= 300:
@@ -107,11 +102,10 @@ class SDKTests(BaseHostTest):
             self.send_kv("timeout", 0)
     
     def _callback_device_lwm2m_put_verification(self, key, value, timestamp):
-        global deviceID
         timeout = 0
         
         # Get resource value from device and increment it
-        resource_value = self.connectApi.get_resource_value_async(deviceID, value)
+        resource_value = self.connectApi.get_resource_value_async(self.deviceID, value)
         
         # Set a 30 second timeout here.
         while not resource_value.is_done and timeout <= 300:
@@ -125,7 +119,7 @@ class SDKTests(BaseHostTest):
         updated_value = int(resource_value.value) + 5
         
         # Set new resource value from cloud
-        async_response = self.connectApi.set_resource_value_async(deviceID, value, updated_value)
+        async_response = self.connectApi.set_resource_value_async(self.deviceID, value, updated_value)
         
         # Set a 30 second timeout here.
         while not async_response.is_done and timeout <= 300:
@@ -139,11 +133,10 @@ class SDKTests(BaseHostTest):
             self.send_kv("res_set", updated_value);
         
     def _callback_device_lwm2m_post_verification(self, key, value, timestamp):
-        global deviceID
         timeout = 0
         
         # Execute POST function on device
-        resource_value = self.connectApi.execute_resource_async(deviceID, value)
+        resource_value = self.connectApi.execute_resource_async(self.deviceID, value)
         
         # Set a 30 second timeout here.
         while not resource_value.is_done and timeout <= 300:
@@ -164,8 +157,7 @@ class SDKTests(BaseHostTest):
 
     def setup(self):
         #Start at iteration 0
-        global iteration
-        iteration = 0
+        self.iteration = 0
         
         # Register callbacks from GT tests
         self.register_callback('device_api_registration', self._callback_device_api_registration)
@@ -205,11 +197,9 @@ class SDKTests(BaseHostTest):
         return self.__result
 
     def teardown(self):
-        global deviceID
-        
         # Delete device from directory so as not to hit device allocation quota.
-        if deviceID:
-            self.deviceApi.delete_device(deviceID)
+        if self.deviceID:
+            self.deviceApi.delete_device(self.deviceID)
             
         pass
     
