@@ -3,10 +3,14 @@
 #include "simple-mbed-cloud-client.h"
 #include "greentea-client/test_env.h"
 
-DigitalOut led(LED2);
+DigitalOut led1(LED1);
+DigitalOut led2(LED2);
 void led_thread() {
+    led1 = 1;
+    led2 = 0;
     while (true) {
-        led = !led;
+        led1 = !led1;
+        led2 = !led2;
         wait(0.5);
     }
 }
