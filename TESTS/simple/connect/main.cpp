@@ -45,7 +45,7 @@ void post_test_callback(MbedCloudClientResource *resource, const uint8_t *buffer
     greentea_send_kv("device_lwm2m_post_test_result", 0);
 }
 
-void smcc_register(void) {
+void spdmc_testsuite_connect(void) {
     int iteration = 0;
     char _key[20] = { };
     char _value[128] = { };
@@ -60,6 +60,7 @@ void smcc_register(void) {
         }
     }
 
+    // provide manifest to greentea so it can correct show skipped and failed tests
     if (iteration == 0) {
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_COUNT, 10);
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Connect to Network");
@@ -375,12 +376,12 @@ void smcc_register(void) {
 }
 
 int main(void) {
-    //Create a thread to execute the function led2_thread
+    //Create a thread to blink an LED and signal that the device is alive
     Thread thread;
     thread.start(led_thread);
 
     GREENTEA_SETUP(150, "sdk_host_tests");
-    smcc_register();
+    spdmc_testsuite_connect();
 
     return 0;
 }
