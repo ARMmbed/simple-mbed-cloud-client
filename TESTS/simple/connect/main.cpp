@@ -51,28 +51,46 @@ void smcc_register(void) {
     char _value[128] = { };
 
     greentea_send_kv("device_ready", true);
-    greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
+    while (1) {
+        greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
-    iteration = atoi(_value);
+        if (strcmp(_key, "iteration") == 0) {
+            iteration = atoi(_value);
+            break;
+        }
+    }
+
+    if (iteration == 0) {
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_COUNT, 9);
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Connect to Internet");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Format Storage");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Simple MCC Initialization");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Register");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Directory");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Consistent Identity");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "LwM2M GET Test");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "LwM2M PUT Test");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "LwM2M POST Test");
+    }
+
 
     // Start network connection test.
-    GREENTEA_TESTCASE_START("Connect to network");
+    GREENTEA_TESTCASE_START("Connect to Internet");
     logger("[INFO] Attempting to connect to network.\r\n");
 
     // Connection definition.
     NetworkInterface *net = NetworkInterface::get_default_instance();
     nsapi_error_t net_status = net->connect();
 
-    GREENTEA_TESTCASE_FINISH("Connect to network", (net_status == 0), (net_status != 0));
-
     // Report status to console.
     if (net_status != 0) {
-        logger("[ERROR] Device failed to connect to network.\r\n");
-        // End the test early, cannot continue without network connection.
+        logger("[ERROR] Device failed to connect to Internet.\r\n");
         greentea_send_kv("fail_test", 0);
     } else {
-        logger("[INFO] Connected to network successfully. IP address: %s\n", net->get_ip_address());
+        logger("[INFO] Connected to Internet successfully. IP address: %s\n", net->get_ip_address());
     }
+
+    GREENTEA_TESTCASE_FINISH("Connect to Internet", (net_status == 0), (net_status != 0));
 
     // Instantiate SimpleMbedCloudClient.
     SimpleMbedCloudClient client(net, bd, &fs);
@@ -82,23 +100,24 @@ void smcc_register(void) {
     if (iteration == 0) {
         logger("[INFO] Resetting storage to a clean state for test.\n");
 
-        GREENTEA_TESTCASE_START("Format storage");
+        GREENTEA_TESTCASE_START("Format Storage");
         //int storage_status = 0;
         int storage_status = client.reformat_storage();
-        GREENTEA_TESTCASE_FINISH("Format storage", (storage_status == 0), (storage_status != 0));
 
         // Report status to console.
         if (storage_status == 0) {
             logger("[INFO] Storage format successful.\r\n");
         } else {
             logger("[ERROR] Storage format failed..\r\n");
+            greentea_send_kv("fail_test", 0);
         }
+
+        GREENTEA_TESTCASE_FINISH("Format Storage", (storage_status == 0), (storage_status != 0));
     }
 
     // SimpleMbedCloudClient initialization must be successful.
-    GREENTEA_TESTCASE_START("Simple Mbed Cloud Client Initialization");
+    GREENTEA_TESTCASE_START("Simple MCC Initialization");
     int client_status = client.init();
-    GREENTEA_TESTCASE_FINISH("Simple Mbed Cloud Client Initialization", (client_status == 0), (client_status != 0));
 
     // Report status to console.
     if (client_status == 0) {
@@ -108,6 +127,9 @@ void smcc_register(void) {
         // End the test early, cannot continue without successful cloud client initialization.
         greentea_send_kv("fail_test", 0);
     }
+
+    GREENTEA_TESTCASE_FINISH("Simple MCC Initialization", (client_status == 0), (client_status != 0));
+
 
     //Create LwM2M resources
     MbedCloudClientResource *res_get_test;
@@ -130,7 +152,7 @@ void smcc_register(void) {
     client.on_registered(&registered);
 
     // Register to Pelion Device Management.
-    GREENTEA_TESTCASE_START("Pelion Device Management Register");
+    GREENTEA_TESTCASE_START("Pelion DM Register");
 
     client.register_and_connect();
 
@@ -144,41 +166,41 @@ void smcc_register(void) {
     bool client_registered = client.is_client_registered();
     if (client_registered) {
         client_status = 0;
-        logger("[INFO] Simple Mbed Cloud Client successfully registered to Mbed Cloud.\r\n");
+        logger("[INFO] Device successfully registered to Pelion DM.\r\n");
     } else {
         logger("[ERROR] Device failed to register.\r\n");
         client_status = -1;
         greentea_send_kv("fail_test", 0);
     }
-    GREENTEA_TESTCASE_FINISH("Pelion Device Management Register", (client_status == 0), (client_status != 0));
+    GREENTEA_TESTCASE_FINISH("Pelion DM Register", (client_status == 0), (client_status != 0));
 
     if (iteration == 0) {
         //Start registration status test
-        GREENTEA_TESTCASE_START("Device registration in Device Directory");
-        int registration_status;
+        GREENTEA_TESTCASE_START("Pelion DM Directory");
+        int reg_status;
 
         logger("[INFO] Wait 5 seconds for Device Directory to update after initial registration.\r\n");
         wait_nb(5000);
 
         // Start host tests with device id
-        logger("[INFO] Starting Mbed Cloud verification using Python SDK...\r\n");
+        logger("[INFO] Starting Pelion DM verification using Python SDK...\r\n");
         greentea_send_kv("device_api_registration", endpointInfo->internal_endpoint_name.c_str());
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
-            if (strcmp(_key, "registration_status") == 0) {
-                if (strcmp(_value, "registered") == 0) {
-                    registration_status = 0;
+            if (strcmp(_key, "registration") == 0) {
+                if (atoi(_value)) {
+                    reg_status = 0;
                     logger("[INFO] Device is registered in the Device Directory.\r\n");
                 } else {
-                    registration_status = -1;
+                    reg_status = -1;
                     logger("[ERROR] Device could not be verified as registered in Device Directory.\r\n");
                 }
                 break;
             }
         }
 
-        GREENTEA_TESTCASE_FINISH("Device registration in Device Directory", (registration_status == 0), (registration_status != 0));
+        GREENTEA_TESTCASE_FINISH("Pelion DM Directory", (reg_status == 0), (reg_status != 0));
 
         logger("[INFO] Resetting device.\r\n");
         greentea_send_kv("advance_test", 0);
@@ -205,11 +227,10 @@ void smcc_register(void) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
             if (strcmp(_key, "verification") == 0) {
-                if (strcmp(_value, "True") == 0) {
+                if (atoi(_value)) {
                     identity_status = 0;
                     logger("[INFO] Device ID consistent, SOTP and Secure Storage is preserved correctly.\r\n");
                 } else {
-                    logger("Value is %s\r\n", _value);
                     identity_status = -1;
                     logger("[ERROR] Device ID is inconsistent. SOTP and Secure Storage was not preserved.\r\n");
                 }
@@ -243,7 +264,7 @@ void smcc_register(void) {
                 break;
             } else if (strcmp(_key, "timeout") == 0) {
                 get_status = -1;
-                logger("[ERROR] Observation of LwM2M resource /5000/0/1 timed out.");
+                logger("[ERROR] Observation of LwM2M resource /5000/0/1 timed out.\r\n");
                 break;
             }
         }
@@ -326,23 +347,22 @@ void smcc_register(void) {
                 int result = atoi(_value);
                 if (result == 0) {
                     post_status = 0;
-                    logger("[INFO] Callback on resource /5000/0/3 executed successfully.");
+                    logger("[INFO] Callback on resource /5000/0/3 executed successfully.\r\n");
                 } else {
                     post_status = -1;
-                    logger("[ERROR] Callback on resource /5000/0/3 failed.");
+                    logger("[ERROR] Callback on resource /5000/0/3 failed.\r\n");
                 }
                 break;
             } else if (strcmp(_key, "timeout") == 0) {
                 post_status = -1;
-                logger("[ERROR] POST of LwM2M resource /5000/0/3 timed out.");
+                logger("[ERROR] POST of LwM2M resource /5000/0/3 timed out.\r\n");
                 break;
             }
         }
 
         GREENTEA_TESTCASE_FINISH("LwM2M POST Test", (post_status == 0), (post_status != 0));
 
-        greentea_send_kv("advance_test", 0);
-        greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
+        GREENTEA_TESTSUITE_RESULT((get_status == 0) && (put_status == 0) && (post_status == 0));
     }
 }
 

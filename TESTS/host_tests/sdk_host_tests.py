@@ -33,15 +33,20 @@ class SDKTests(BaseHostTest):
     deviceID = None
     iteration = None
     post_timeout = None
+
+    def send_safe(self, key, value):
+        #self.send_kv('dummy_start', 0)
+        self.send_kv(key, value)
+        #self.send_kv('dummy_end', 1)
     
     def test_steps(self):
         # Step 0 set up test
         system_reset = yield
         
         # Step 1 device connected to Pelion should reset.
-        self.send_kv('reset', 0)
+        self.send_safe('reset', 0)
         time.sleep(self.program_cycle_s)
-        self.send_kv('__sync', 0)
+        self.send_safe('__sync', 0)
         self.iteration = self.iteration + 1
         system_reset = yield   
         
@@ -50,7 +55,7 @@ class SDKTests(BaseHostTest):
         
     def _callback_device_ready(self, key, value, timestamp):
         # Send device iteration number after a reset
-        self.send_kv('iteration', self.iteration)
+        self.send_safe('iteration', self.iteration)
     
     def _callback_advance_test(self, key, value, timestamp):
         # Advance test sequence
@@ -69,15 +74,14 @@ class SDKTests(BaseHostTest):
             device = self.deviceApi.get_device(value)
             
             # Send registraton status to device
-            self.send_kv("registration_status", device.state)
-            
+            self.send_safe("registration", 1 if device.state == "registered" else 0)
         except:
             # SDK throws an exception if the device is not found (unsuccessful registration) or times out
-            self.send_kv("registration_status", "error")
+            self.send_safe("registration", 0)
             
     def _callback_device_verification(self, key, value, timestamp):
         # Send true if old DeviceID is the same as current device is
-        self.send_kv("verification", (self.deviceID == value))
+        self.send_safe("verification", 1 if self.deviceID == value else 0)
         
     def _callback_fail_test(self, key, value, timestamp):
         # Test failed. End it.
@@ -96,10 +100,10 @@ class SDKTests(BaseHostTest):
         
         if async_response.is_done:
             # Send resource value back to device
-            self.send_kv("res_value", async_response.value)
+            self.send_safe("res_value", async_response.value)
         else:
             # Request timed out.
-            self.send_kv("timeout", 0)
+            self.send_safe("timeout", 0)
     
     def _callback_device_lwm2m_put_verification(self, key, value, timestamp):
         timeout = 0
@@ -113,7 +117,7 @@ class SDKTests(BaseHostTest):
             timeout += 1
             
         if not resource_value.is_done:
-            self.send_kv("timeout", 0)
+            self.send_safe("timeout", 0)
             return
         
         updated_value = int(resource_value.value) + 5
@@ -127,10 +131,10 @@ class SDKTests(BaseHostTest):
             timeout += 1
             
         if not async_response.is_done:
-            self.send_kv("timeout", 0)
+            self.send_safe("timeout", 0)
         else:
             # Send new resource value to device for verification.
-            self.send_kv("res_set", updated_value);
+            self.send_safe("res_set", updated_value);
         
     def _callback_device_lwm2m_post_verification(self, key, value, timestamp):
         timeout = 0
@@ -144,7 +148,7 @@ class SDKTests(BaseHostTest):
             timeout += 1
             
         if not resource_value.is_done:
-            self.send_kv("timeout", 0)
+            self.send_safe("timeout", 0)
             self.post_timeout = 1
         
     def _callback_device_lwm2m_post_verification_result(self, key, value, timestamp):
@@ -153,7 +157,7 @@ class SDKTests(BaseHostTest):
         # If post_timeout is not none, the request took longer than 30 seconds, which is
         # a failure. Don't send this value.
         if not self.post_timeout:
-            self.send_kv("post_test_executed", 0)
+            self.send_safe("post_test_executed", 0)
 
     def setup(self):
         #Start at iteration 0
