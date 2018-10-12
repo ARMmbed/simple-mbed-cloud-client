@@ -93,7 +93,7 @@ class SDKTests(BaseHostTest):
         
     def _callback_device_lwm2m_get_verification(self, key, value, timestamp):
         timeout = 0
-        
+
         # Get resource value from device
         async_response = self.connectApi.get_resource_value_async(self.deviceID, value)
         
@@ -104,7 +104,25 @@ class SDKTests(BaseHostTest):
         
         if async_response.is_done:
             # Send resource value back to device
-            self.send_safe("res_value", async_response.value)
+            self.send_safe("get_value", async_response.value)
+        else:
+            # Request timed out.
+            self.send_safe("timeout", 0)
+    
+    def _callback_device_lwm2m_set_verification(self, key, value, timestamp):
+        timeout = 0
+
+        # Get resource value from device
+        async_response = self.connectApi.get_resource_value_async(self.deviceID, value)
+        
+        # Set a 30 second timeout here.
+        while not async_response.is_done and timeout <= 300:
+            time.sleep(0.1)
+            timeout += 1
+        
+        if async_response.is_done:
+            # Send resource value back to device
+            self.send_safe("set_value", async_response.value)
         else:
             # Request timed out.
             self.send_safe("timeout", 0)
@@ -174,6 +192,7 @@ class SDKTests(BaseHostTest):
         self.register_callback('device_verification', self._callback_device_verification)
         self.register_callback('fail_test', self._callback_fail_test)
         self.register_callback('device_lwm2m_get_test', self._callback_device_lwm2m_get_verification)
+        self.register_callback('device_lwm2m_set_test', self._callback_device_lwm2m_set_verification)
         self.register_callback('device_lwm2m_put_test', self._callback_device_lwm2m_put_verification)
         self.register_callback('device_lwm2m_post_test', self._callback_device_lwm2m_post_verification)
         self.register_callback('device_lwm2m_post_test_result', self._callback_device_lwm2m_post_verification_result)

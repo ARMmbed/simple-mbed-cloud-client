@@ -35,8 +35,8 @@ void logger(const char* message) {
 
 static const ConnectorClientEndpointInfo* endpointInfo;
 void registered(const ConnectorClientEndpointInfo *endpoint) {
-    //printf("[INFO] Connected to Pelion Device Management. Device ID: %s\n",
-    //        endpoint->internal_endpoint_name.c_str());
+    printf("[INFO] Connected to Pelion Device Management. Device ID: %s\n",
+            endpoint->internal_endpoint_name.c_str());
     endpointInfo = endpoint;
 }
 
@@ -254,7 +254,7 @@ void smcc_register(void) {
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
-            if (strcmp(_key, "res_value") == 0) {
+            if (strcmp(_key, "get_value") == 0) {
                 if (strcmp(_value, "test0") == 0) {
                     get_status = 0;
                     logger("[INFO] Original value of LwM2M resource /5000/0/1 is read correctly\r\n");
@@ -279,11 +279,11 @@ void smcc_register(void) {
         // Update resource /5000/0/1 from client and observe value
         res_get_test->set_value("test1");
 
-        greentea_send_kv("device_lwm2m_get_test", "/5000/0/1");
+        greentea_send_kv("device_lwm2m_set_test", "/5000/0/1");
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
-            if (strcmp(_key, "res_value") == 0) {
+            if (strcmp(_key, "set_value") == 0) {
                 if (strcmp(_value, "test1") == 0) {
                     set_status = 0;
                     logger("[INFO] Changed value of LwM2M resource /5000/0/1 is observed correctly\r\n");
