@@ -32,7 +32,7 @@ using namespace utest::v1;
 
 
 NetworkInterface* interface = NULL;
-
+static uint32_t thread_counter = 0;
 
 DigitalOut led2(LED2);
 void led_heartbeat() {
@@ -56,39 +56,67 @@ static control_t setup_network(const size_t call_count) {
     return CaseNext;
 }
 
-static control_t download_1k(const size_t call_count) {
-    download_test(1024, interface, false);
+void download_fn() {
+    uint32_t thread_id = core_util_atomic_incr_u32(&thread_counter, 1) - 1;
 
+    download_test(8*1024, interface, false, thread_id);
+}
+
+static control_t download_1_thread(const size_t call_count) {
+    thread_counter = 0;
+ 
+    Thread t1;
+    t1.start(download_fn);
+    t1.join();
+ 
     return CaseNext;
 }
 
-static control_t download_2k(const size_t call_count) {
-    download_test(2*1024, interface, false);
+static control_t download_2_threads(const size_t call_count) {
+    thread_counter = 0;
 
+    Thread t1;
+    Thread t2;
+    t1.start(download_fn);
+    t2.start(download_fn);
+    t1.join();
+    t2.join();
+ 
     return CaseNext;
 }
 
-static control_t download_4k(const size_t call_count) {
-    download_test(4*1024, interface, false);
+static control_t download_3_threads(const size_t call_count) {
+    thread_counter = 0;
 
+    Thread t1;
+    Thread t2;
+    Thread t3;
+    t1.start(download_fn);
+    t2.start(download_fn);
+    t3.start(download_fn);
+    t1.join();
+    t2.join();
+    t3.join();
+ 
     return CaseNext;
 }
 
-static control_t download_8k(const size_t call_count) {
-    download_test(8*1024, interface, false);
+static control_t download_4_threads(const size_t call_count) {
+    thread_counter = 0;
 
-    return CaseNext;
-}
-
-static control_t download_16k(const size_t call_count) {
-    download_test(16*1024, interface, false);
-
-    return CaseNext;
-}
-
-static control_t download_32k(const size_t call_count) {
-    download_test(32*1024, interface, false);
-
+    Thread t1;
+    Thread t2;
+    Thread t3;
+    Thread t4;
+    t1.start(download_fn);
+    t2.start(download_fn);
+    t3.start(download_fn);
+    t4.start(download_fn);
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+ 
     return CaseNext;
 }
 
@@ -99,12 +127,10 @@ utest::v1::status_t greentea_setup(const size_t number_of_cases) {
 
 Case cases[] = {
     Case("Setup network", setup_network),
-    Case("Download  1k", download_1k),
-    Case("Download  2k", download_2k),
-    Case("Download  4k", download_4k),
-    Case("Download  8k", download_8k),
-    Case("Download 16k", download_16k),
-    Case("Download 32k", download_32k),
+    Case("Download 1 thread", download_1_thread),
+    Case("Download 2 threads", download_2_threads),
+    Case("Download 3 threads", download_3_threads),
+    Case("Download 4 threads", download_4_threads),
 };
 
 Specification specification(greentea_setup, cases);

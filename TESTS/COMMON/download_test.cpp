@@ -60,7 +60,7 @@ static void socket_event(void) {
     led1 = true;
 }
 
-void download_test(size_t size, NetworkInterface* interface, bool tls_mode) {
+void download_test(size_t size, NetworkInterface* interface, bool tls_mode, uint32_t thread_id) {
     int result = -1;
 
     /* setup TCP socket */
@@ -72,15 +72,15 @@ void download_test(size_t size, NetworkInterface* interface, bool tls_mode) {
         if (result == 0) {
             break;
         }
-        printf("[INFO] Connection failed. Retry %d of %d\r\n", tries, MAX_RETRIES);
+        printf("[INFO-%d] Connection failed. Retry %d of %d\r\n", thread_id, tries, MAX_RETRIES);
     }
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, result, "failed to connect");
 
     tcpsocket->set_blocking(false);
-    printf("[INFO] Non-blocking socket mode set\r\n");
+    printf("[INFO-%d] Non-blocking socket mode set\r\n", thread_id);
 
     tcpsocket->sigio(socket_event);
-    printf("[INFO] Registered socket callback function\r\n");
+    printf("[INFO-%d] Registered socket callback function\r\n", thread_id);
 
     /* setup request */
     size_t request_size = strlen(part1) + strlen(dl_path) + strlen(part2) + strlen(dl_host) + strlen(part3) + 1;
@@ -93,7 +93,7 @@ void download_test(size_t size, NetworkInterface* interface, bool tls_mode) {
     memcpy(&request[strlen(part1) + strlen(dl_path) + strlen(part2)], dl_host, strlen(dl_host));
     memcpy(&request[strlen(part1) + strlen(dl_path) + strlen(part2) + strlen(dl_host)], part3, strlen(dl_host));
 
-    printf("[INFO] Request header: %s\r\n", request);
+    printf("[INFO-%d] Request header: %s\r\n", thread_id, request);
 
     /* send request to server */
     result = tcpsocket->send(request, request_size);
@@ -144,7 +144,7 @@ void download_test(size_t size, NetworkInterface* interface, bool tls_mode) {
                     received_bytes += result;
                 }
 
-                printf("[INFO] Received bytes: %u\r\n", received_bytes);
+                printf("[INFO-%d] Received bytes: %u\r\n", thread_id, received_bytes);
             }
         }
         while ((result > 0) && (received_bytes < expected_bytes));
@@ -154,5 +154,13 @@ void download_test(size_t size, NetworkInterface* interface, bool tls_mode) {
     delete tcpsocket;
     delete[] receive_buffer;
 
-    printf("[INFO] Complete\r\n");
+    printf("[INFO-%d] Complete\r\n", thread_id);
+}
+
+void download_test(size_t size, NetworkInterface* interface, bool tls_mode) {
+    return download_test(size, interface, tls_mode, 0);
+}
+
+void download_test(size_t size, NetworkInterface* interface) {
+    return download_test(size, interface, false, 0);
 }
