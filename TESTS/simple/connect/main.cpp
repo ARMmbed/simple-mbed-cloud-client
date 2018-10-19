@@ -1,3 +1,30 @@
+/*
+ * mbed Microcontroller Library
+ * Copyright (c) 2006-2016 ARM Limited
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#if !defined(MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE)
+#error [NOT_SUPPORTED] No network interface found on this target.
+#endif
+
+#if MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE != ETHERNET && \
+    MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE != WIFI && \
+    MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE != CELLULAR
+#error [NOT_SUPPORTED] Either WiFi, Ethernet or Cellular network interface need to be enabled
+#endif
+
 #include "mbed.h"
 #include "FATFileSystem.h"
 #include "simple-mbed-cloud-client.h"
@@ -6,10 +33,8 @@
 DigitalOut led1(LED1);
 DigitalOut led2(LED2);
 void led_heartbeat() {
-    led1 = 1;
     led2 = 0;
     while (true) {
-        led1 = !led1;
         led2 = !led2;
         wait(0.5);
     }
