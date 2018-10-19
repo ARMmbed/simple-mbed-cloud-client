@@ -38,19 +38,17 @@ using namespace utest::v1;
 #ifdef MBED_CONF_DOWNLOAD_TEST_URL_HOST
   const char dl_host[] = MBED_CONF_DOWNLOAD_TEST_URL_HOST;
 #else
-  const char dl_host[] = "lootbox.s3.dualstack.us-west-2.amazonaws.com";
+  const char dl_host[] = "armmbed.github.io";
 #endif
 #ifdef MBED_CONF_DOWNLOAD_TEST_URL_PATH
   const char dl_path[] = MBED_CONF_DOWNLOAD_TEST_URL_PATH;
 #else
-  const char dl_path[] = "/firmware/";
+  const char dl_path[] = "/mbed-test-files/elizabeth.txt";
 #endif
 #ifdef MBED_CONF_DOWNLOAD_TEST_FILENAME
-  const char dl_filename[] = MBED_CONF_DOWNLOAD_TEST_FILENAME;
   #include MBED_CONF_DOWNLOAD_TEST_FILENAME
 #else
-  const char dl_filename[] = "alice.h";
-  #include "alice.h"
+  #include "elizabeth.h"
 #endif
 
 static volatile bool event_fired = false;
@@ -61,6 +59,18 @@ const char part1[] = "GET ";
 const char part2[] = " HTTP/1.1\nHost: ";
 const char part3[] = "\n\n";
 
+DigitalOut led1(LED1);
+DigitalOut led2(LED2);
+void led_thread() {
+    led1 = 1;
+    led2 = 0;
+    while (true) {
+        led1 = !led1;
+        led2 = !led2;
+        wait(0.5);
+    }
+}
+
 static void socket_event(void) {
     event_fired = true;
 }
@@ -70,7 +80,7 @@ void download(size_t size) {
 
     /* setup TCP socket */
     TCPSocket* tcpsocket = new TCPSocket(interface);
-    TEST_ASSERT_NOT_NULL_MESSAGE(tcpsocket, "failed to instantiate tlssocket");
+    TEST_ASSERT_NOT_NULL_MESSAGE(tcpsocket, "failed to instantiate TCPSocket");
 
     for (int tries = 0; tries < MAX_RETRIES; tries++) {
         result = tcpsocket->connect(dl_host, 80);
@@ -88,16 +98,15 @@ void download(size_t size) {
     printf("[INFO] Registered socket callback function\r\n");
 
     /* setup request */
-    size_t request_size = strlen(part1) + strlen(dl_path) + strlen(dl_filename) + strlen(part2) + strlen(dl_host) + strlen(part3) + 1;
+    size_t request_size = strlen(part1) + strlen(dl_path) + strlen(part2) + strlen(dl_host) + strlen(part3) + 1;
     char *request = new char[request_size]();
 
     /* construct request */
     memcpy(&request[0], part1, strlen(part1));
     memcpy(&request[strlen(part1)], dl_path, strlen(dl_path));
-    memcpy(&request[strlen(part1) + strlen(dl_path)], dl_filename, strlen(dl_filename));
-    memcpy(&request[strlen(part1) + strlen(dl_path) + strlen(dl_filename)], part2, strlen(part2));
-    memcpy(&request[strlen(part1) + strlen(dl_path) + strlen(dl_filename) + strlen(part2)], dl_host, strlen(dl_host));
-    memcpy(&request[strlen(part1) + strlen(dl_path) + strlen(dl_filename) + strlen(part2) + strlen(dl_host)], part3, strlen(dl_host));
+    memcpy(&request[strlen(part1) + strlen(dl_path)], part2, strlen(part2));
+    memcpy(&request[strlen(part1) + strlen(dl_path) + strlen(part2)], dl_host, strlen(dl_host));
+    memcpy(&request[strlen(part1) + strlen(dl_path) + strlen(part2) + strlen(dl_host)], part3, strlen(dl_host));
 
     printf("[INFO] Request header: %s\r\n", request);
 
@@ -228,5 +237,7 @@ Case cases[] = {
 Specification specification(greentea_setup, cases);
 
 int main() {
+    Thread thread;
+    thread.start(led_thread);
     return !Harness::run(specification);
 }
