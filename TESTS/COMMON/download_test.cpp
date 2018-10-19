@@ -27,8 +27,6 @@
 #include "greentea-client/test_env.h"
 #include <string>
 
-//#include "certificate_aws_s3.h"
-
 #define MAX_RETRIES 3
 
 #ifdef MBED_CONF_DOWNLOAD_TEST_URL_HOST
@@ -39,28 +37,29 @@
 #ifdef MBED_CONF_DOWNLOAD_TEST_URL_PATH
   const char dl_path[] = MBED_CONF_DOWNLOAD_TEST_URL_PATH;
 #else
-  const char dl_path[] = "/mbed-test-files/elizabeth.txt";
+  const char dl_path[] = "/mbed-test-files/alice.txt";
 #endif
 #ifdef MBED_CONF_DOWNLOAD_TEST_FILENAME
   #include MBED_CONF_DOWNLOAD_TEST_FILENAME
 #else
-  #include "elizabeth.h"
+  #include "alice.h"
 #endif
 
 const char part1[] = "GET ";
 const char part2[] = " HTTP/1.1\nHost: ";
 const char part3[] = "\n\n";
 
-static volatile bool event_fired = false;
+static volatile bool event_fired[5] = { };
 
 DigitalOut led1(LED1);
 
-static void socket_event(void) {
-    event_fired = true;
-    led1 = true;
-}
+static void socket_event_0(void) { event_fired[0] = true; }
+static void socket_event_1(void) { event_fired[1] = true; }
+static void socket_event_2(void) { event_fired[2] = true; }
+static void socket_event_3(void) { event_fired[3] = true; }
+static void socket_event_4(void) { event_fired[4] = true; }
 
-void download_test(size_t size, NetworkInterface* interface, bool tls_mode, uint32_t thread_id) {
+size_t download_test(size_t buff_size, NetworkInterface* interface, uint32_t thread_id) {
     int result = -1;
 
     /* setup TCP socket */
@@ -79,8 +78,22 @@ void download_test(size_t size, NetworkInterface* interface, bool tls_mode, uint
     tcpsocket->set_blocking(false);
     printf("[INFO-%d] Non-blocking socket mode set\r\n", thread_id);
 
-    tcpsocket->sigio(socket_event);
+    if (thread_id == 0) {
+        // technically this is non-threaded mode
+        tcpsocket->sigio(socket_event_0);
+    } else if (thread_id == 1) {
+        tcpsocket->sigio(socket_event_1);
+    } else if (thread_id == 2) {
+        tcpsocket->sigio(socket_event_2);
+    } else if (thread_id == 3) {
+        tcpsocket->sigio(socket_event_3);
+    } else if (thread_id == 4) {
+        tcpsocket->sigio(socket_event_4);
+    } else {
+        TEST_ASSERT_MESSAGE(0, "wrong thread id");
+    }
     printf("[INFO-%d] Registered socket callback function\r\n", thread_id);
+    event_fired[thread_id] = false;
 
     /* setup request */
     size_t request_size = strlen(part1) + strlen(dl_path) + strlen(part2) + strlen(dl_host) + strlen(part3) + 1;
@@ -100,7 +113,7 @@ void download_test(size_t size, NetworkInterface* interface, bool tls_mode, uint
     TEST_ASSERT_EQUAL_INT_MESSAGE(request_size, result, "failed to send");
 
     /* read response */
-    char* receive_buffer = new char[size];
+    char* receive_buffer = new char[buff_size];
     TEST_ASSERT_NOT_NULL_MESSAGE(receive_buffer, "failed to allocate receive buffer");
 
     size_t expected_bytes = sizeof(story);
@@ -110,13 +123,17 @@ void download_test(size_t size, NetworkInterface* interface, bool tls_mode, uint
     /* loop until all expected bytes have been received */
     while (received_bytes < expected_bytes) {
         /* wait for async event */
-        while(!event_fired);
-        event_fired = false;
-        led1 = false;
+        while(!event_fired[thread_id]) {
+            if (thread_id > 0) {
+                Thread::yield();
+            }
+        }
+        event_fired[thread_id] = false;
+        led1 = true;
 
         /* loop until all data has been read from socket */
         do {
-            result = tcpsocket->recv(receive_buffer, size);
+            result = tcpsocket->recv(receive_buffer, buff_size);
             TEST_ASSERT_MESSAGE((result == NSAPI_ERROR_WOULD_BLOCK) || (result >= 0), "failed to read socket");
 
             if (result > 0) {
@@ -129,17 +146,11 @@ void download_test(size_t size, NetworkInterface* interface, bool tls_mode, uint
                     /* remove header before comparison */
                     memmove(receive_buffer, &receive_buffer[body_index + 4], result - body_index - 4);
 
-                    TEST_ASSERT_EQUAL_STRING_LEN_MESSAGE(story,
-                                                         receive_buffer,
-                                                         result - body_index - 4,
-                                                         "character mismatch");
+                    TEST_ASSERT_EQUAL_STRING_LEN_MESSAGE(story, receive_buffer, result - body_index - 4, "character mismatch in header");
 
                     received_bytes += (result - body_index - 4);
                 } else {
-                    TEST_ASSERT_EQUAL_STRING_LEN_MESSAGE(&story[received_bytes],
-                                                         receive_buffer,
-                                                         result,
-                                                         "character mismatch");
+                    TEST_ASSERT_EQUAL_STRING_LEN_MESSAGE(&story[received_bytes], receive_buffer, result, "character mismatch in body");
 
                     received_bytes += result;
                 }
@@ -148,6 +159,8 @@ void download_test(size_t size, NetworkInterface* interface, bool tls_mode, uint
             }
         }
         while ((result > 0) && (received_bytes < expected_bytes));
+
+        led1 = false;
     }
 
     delete request;
@@ -155,12 +168,10 @@ void download_test(size_t size, NetworkInterface* interface, bool tls_mode, uint
     delete[] receive_buffer;
 
     printf("[INFO-%d] Complete\r\n", thread_id);
+
+    return received_bytes;
 }
 
-void download_test(size_t size, NetworkInterface* interface, bool tls_mode) {
-    return download_test(size, interface, tls_mode, 0);
-}
-
-void download_test(size_t size, NetworkInterface* interface) {
-    return download_test(size, interface, false, 0);
+size_t download_test(size_t buff_size, NetworkInterface* interface) {
+    return download_test(buff_size, interface, 0);
 }

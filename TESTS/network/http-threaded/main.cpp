@@ -15,11 +15,15 @@
  * limitations under the License.
  */
 
-/** @file fopen.cpp Test cases to POSIX file fopen() interface.
- *
- * Please consult the documentation under the test-case functions for
- * a description of the individual test case.
- */
+#if !defined(MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE)
+#error [NOT_SUPPORTED] No network interface found on this target.
+#endif
+
+#if MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE != ETHERNET && \
+    MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE != WIFI && \
+    MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE != CELLULAR
+#error [NOT_SUPPORTED] Either WiFi, Ethernet or Cellular network interface need to be enabled
+#endif
 
 #include "mbed.h"
 
@@ -31,10 +35,10 @@ using namespace utest::v1;
 #include <string>
 
 
+DigitalOut led2(LED2);
 NetworkInterface* interface = NULL;
 static uint32_t thread_counter = 0;
 
-DigitalOut led2(LED2);
 void led_heartbeat() {
     led2 = 0;
     while (true) {
@@ -42,7 +46,6 @@ void led_heartbeat() {
         wait(0.5);
     }
 }
-
 
 static control_t setup_network(const size_t call_count) {
     interface = NetworkInterface::get_default_instance();
@@ -52,14 +55,12 @@ static control_t setup_network(const size_t call_count) {
     TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, err);
     printf("[INFO] IP address is '%s'\n", interface->get_ip_address());
     printf("[INFO] MAC address is '%s'\n", interface->get_mac_address());
-
     return CaseNext;
 }
 
 void download_fn() {
-    uint32_t thread_id = core_util_atomic_incr_u32(&thread_counter, 1) - 1;
-
-    download_test(8*1024, interface, false, thread_id);
+    uint32_t thread_id = core_util_atomic_incr_u32(&thread_counter, 1);
+    download_test(8*1024, interface, thread_id);
 }
 
 static control_t download_1_thread(const size_t call_count) {
@@ -121,7 +122,7 @@ static control_t download_4_threads(const size_t call_count) {
 }
 
 utest::v1::status_t greentea_setup(const size_t number_of_cases) {
-    GREENTEA_SETUP(5*60, "default_auto");
+    GREENTEA_SETUP(10*60, "default_auto");
     return greentea_test_setup_handler(number_of_cases);
 }
 

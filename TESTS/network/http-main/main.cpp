@@ -15,11 +15,15 @@
  * limitations under the License.
  */
 
-/** @file fopen.cpp Test cases to POSIX file fopen() interface.
- *
- * Please consult the documentation under the test-case functions for
- * a description of the individual test case.
- */
+#if !defined(MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE)
+#error [NOT_SUPPORTED] No network interface found on this target.
+#endif
+
+#if MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE != ETHERNET && \
+    MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE != WIFI && \
+    MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE != CELLULAR
+#error [NOT_SUPPORTED] Either WiFi, Ethernet or Cellular network interface need to be enabled
+#endif
 
 #include "mbed.h"
 
@@ -30,11 +34,9 @@ using namespace utest::v1;
 #include "download_test.h"
 #include <string>
 
-
+DigitalOut led2(LED2);
 NetworkInterface* interface = NULL;
 
-
-DigitalOut led2(LED2);
 void led_heartbeat() {
     led2 = 0;
     while (true) {
@@ -42,7 +44,6 @@ void led_heartbeat() {
         wait(0.5);
     }
 }
-
 
 static control_t setup_network(const size_t call_count) {
     interface = NetworkInterface::get_default_instance();
@@ -52,43 +53,41 @@ static control_t setup_network(const size_t call_count) {
     TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, err);
     printf("[INFO] IP address is '%s'\n", interface->get_ip_address());
     printf("[INFO] MAC address is '%s'\n", interface->get_mac_address());
+    return CaseNext;
+}
 
+static control_t download_256(const size_t call_count) {
+    download_test(256, interface);
     return CaseNext;
 }
 
 static control_t download_1k(const size_t call_count) {
     download_test(1024, interface);
-
     return CaseNext;
 }
 
 static control_t download_2k(const size_t call_count) {
     download_test(2*1024, interface);
-
     return CaseNext;
 }
 
 static control_t download_4k(const size_t call_count) {
     download_test(4*1024, interface);
-
     return CaseNext;
 }
 
 static control_t download_8k(const size_t call_count) {
     download_test(8*1024, interface);
-
     return CaseNext;
 }
 
 static control_t download_16k(const size_t call_count) {
     download_test(16*1024, interface);
-
     return CaseNext;
 }
 
 static control_t download_32k(const size_t call_count) {
     download_test(32*1024, interface);
-
     return CaseNext;
 }
 
@@ -99,12 +98,13 @@ utest::v1::status_t greentea_setup(const size_t number_of_cases) {
 
 Case cases[] = {
     Case("Setup network", setup_network),
-    Case("Download  1k", download_1k),
-    Case("Download  2k", download_2k),
-    Case("Download  4k", download_4k),
-    Case("Download  8k", download_8k),
-    Case("Download 16k", download_16k),
-    Case("Download 32k", download_32k),
+    Case("Download 256 recv buffer", download_256),
+    Case("Download  1k recv buffer", download_1k),
+    Case("Download  2k recv buffer", download_2k),
+    Case("Download  4k recv buffer", download_4k),
+    Case("Download  8k recv buffer", download_8k),
+    Case("Download 16k recv buffer", download_16k),
+    Case("Download 32k recv buffer", download_32k),
 };
 
 Specification specification(greentea_setup, cases);
