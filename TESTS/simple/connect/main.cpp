@@ -5,7 +5,7 @@
 
 DigitalOut led1(LED1);
 DigitalOut led2(LED2);
-void led_thread() {
+void led_heartbeat() {
     led1 = 1;
     led2 = 0;
     while (true) {
@@ -382,7 +382,7 @@ void spdmc_testsuite_connect(void) {
 int main(void) {
     //Create a thread to blink an LED and signal that the device is alive
     Thread thread;
-    thread.start(led_thread);
+    thread.start(led_heartbeat);
 
     GREENTEA_SETUP(210, "sdk_host_tests");
     spdmc_testsuite_connect();
