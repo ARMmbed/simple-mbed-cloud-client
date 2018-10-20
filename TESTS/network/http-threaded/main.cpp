@@ -34,7 +34,6 @@ using namespace utest::v1;
 #include "download_test.h"
 #include <string>
 
-
 DigitalOut led2(LED2);
 NetworkInterface* interface = NULL;
 static uint32_t thread_counter = 0;
@@ -60,7 +59,7 @@ static control_t setup_network(const size_t call_count) {
 
 void download_fn() {
     uint32_t thread_id = core_util_atomic_incr_u32(&thread_counter, 1);
-    download_test(8*1024, interface, thread_id);
+    download_test(4*1024, interface, thread_id);
 }
 
 static control_t download_1_thread(const size_t call_count) {

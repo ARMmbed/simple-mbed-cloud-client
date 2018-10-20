@@ -30,7 +30,6 @@
 #include "simple-mbed-cloud-client.h"
 #include "greentea-client/test_env.h"
 
-DigitalOut led1(LED1);
 DigitalOut led2(LED2);
 void led_heartbeat() {
     led2 = 0;

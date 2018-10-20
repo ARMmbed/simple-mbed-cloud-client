@@ -56,6 +56,11 @@ static control_t setup_network(const size_t call_count) {
     return CaseNext;
 }
 
+static control_t download_256(const size_t call_count) {
+    download_test(256, interface);
+    return CaseNext;
+}
+
 static control_t download_1k(const size_t call_count) {
     download_test(1024, interface);
     return CaseNext;
@@ -93,6 +98,7 @@ utest::v1::status_t greentea_setup(const size_t number_of_cases) {
 
 Case cases[] = {
     Case("Setup network", setup_network),
+    Case("Download 256 recv buffer", download_256),
     Case("Download  1k recv buffer", download_1k),
     Case("Download  2k recv buffer", download_2k),
     Case("Download  4k recv buffer", download_4k),

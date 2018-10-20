@@ -118,7 +118,7 @@ size_t download_test(size_t buff_size, NetworkInterface* interface, uint32_t thr
 
     size_t expected_bytes = sizeof(story);
     size_t received_bytes = 0;
-    uint32_t body_index = 0;
+    int body_index = -1;
 
     /* loop until all expected bytes have been received */
     while (received_bytes < expected_bytes) {
@@ -138,17 +138,23 @@ size_t download_test(size_t buff_size, NetworkInterface* interface, uint32_t thr
 
             if (result > 0) {
                 /* skip HTTP header */
-                if (body_index == 0) {
+                if (body_index < 0) {
+                    /* note that there are no required Response headers and their length may greatly vary */
                     std::string header(receive_buffer, result);
                     body_index = header.find("\r\n\r\n");
-                    TEST_ASSERT_MESSAGE(body_index != std::string::npos, "failed to find body");
+                    if (body_index < 0) {
+                        continue;
+                    } else {
+                        printf("[INFO] Body index: %d\r\n", body_index);
+                        TEST_ASSERT_MESSAGE(body_index != std::string::npos, "failed to find body");
 
-                    /* remove header before comparison */
-                    memmove(receive_buffer, &receive_buffer[body_index + 4], result - body_index - 4);
+                        /* remove header before comparison */
+                        memmove(receive_buffer, &receive_buffer[body_index + 4], result - body_index - 4);
 
-                    TEST_ASSERT_EQUAL_STRING_LEN_MESSAGE(story, receive_buffer, result - body_index - 4, "character mismatch in header");
+                        TEST_ASSERT_EQUAL_STRING_LEN_MESSAGE(story, receive_buffer, result - body_index - 4, "character mismatch in header");
 
-                    received_bytes += (result - body_index - 4);
+                        received_bytes += (result - body_index - 4);
+                    }
                 } else {
                     TEST_ASSERT_EQUAL_STRING_LEN_MESSAGE(&story[received_bytes], receive_buffer, result, "character mismatch in body");
 
