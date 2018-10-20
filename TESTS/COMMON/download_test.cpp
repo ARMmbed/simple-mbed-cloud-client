@@ -120,6 +120,9 @@ size_t download_test(size_t buff_size, NetworkInterface* interface, uint32_t thr
     size_t received_bytes = 0;
     int body_index = -1;
 
+    Timer timer;
+    timer.start();
+
     /* loop until all expected bytes have been received */
     while (received_bytes < expected_bytes) {
         /* wait for async event */
@@ -145,8 +148,7 @@ size_t download_test(size_t buff_size, NetworkInterface* interface, uint32_t thr
                     if (body_index < 0) {
                         continue;
                     } else {
-                        printf("[INFO] Body index: %d\r\n", body_index);
-                        TEST_ASSERT_MESSAGE(body_index != std::string::npos, "failed to find body");
+                        printf("[INFO-%d] Found body index: %d\r\n", thread_id, body_index);
 
                         /* remove header before comparison */
                         memmove(receive_buffer, &receive_buffer[body_index + 4], result - body_index - 4);
@@ -169,11 +171,15 @@ size_t download_test(size_t buff_size, NetworkInterface* interface, uint32_t thr
         led1 = false;
     }
 
+    TEST_ASSERT_MESSAGE(body_index >= 0, "failed to find body");
+
     delete request;
     delete tcpsocket;
     delete[] receive_buffer;
 
-    printf("[INFO-%d] Complete\r\n", thread_id);
+    timer.stop();
+
+    printf("[INFO-%d] Downloaded %.2fKB in %f seconds (%.2fKB/s)\r\n", thread_id, float(received_bytes) / 1024, timer.read(), float(received_bytes) / timer.read() / 1024);
 
     return received_bytes;
 }
