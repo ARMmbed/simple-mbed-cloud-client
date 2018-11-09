@@ -163,7 +163,7 @@ int SimpleMbedCloudClient::init() {
     palStatus_t status = PAL_SUCCESS;
     status = pal_fsRmFiles(DEFAULT_FIRMWARE_PATH);
     if(status == PAL_SUCCESS) {
-        tr_info("Firmware storage erased");
+        printf("[SMCC] Firmware storage erased\n");
     } else if (status == PAL_ERR_FS_NO_PATH) {
         tr_info("Firmware path not found/does not exist");
     } else {
