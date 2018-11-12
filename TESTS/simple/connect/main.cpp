@@ -84,10 +84,6 @@ void spdmc_testsuite_connect(void) {
     GREENTEA_TESTCASE_START("Connect to Network");
     logger("[INFO] Attempting to connect to network.\r\n");
 
-    // Start network connection test.
-    GREENTEA_TESTCASE_START("Connect to network");
-    printf("[INFO] Attempting to connect to network.\r\n");
-
     // Connection definition.
     NetworkInterface *net = NetworkInterface::get_default_instance();
     nsapi_error_t net_status = net->connect();
