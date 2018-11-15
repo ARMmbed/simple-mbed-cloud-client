@@ -137,7 +137,6 @@ void spdmc_testsuite_connect(void) {
 
     GREENTEA_TESTCASE_FINISH("Simple PDMC Initialization", (client_status == 0), (client_status != 0));
 
-  
     //Create LwM2M resources
     MbedCloudClientResource *res_get_test;
     res_get_test = client.create_resource("5000/0/1", "get_resource");
