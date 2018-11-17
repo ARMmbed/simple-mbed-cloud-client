@@ -64,7 +64,11 @@ This library is a simpler interface to Pelion DM Client, making it trivial to ex
 
 ## Testing
 
-Simple Pelion DM Client provides Greentea tests to test your porting efforts.
+Simple Pelion DM Client provides Greentea tests to test your porting efforts. Before running these tests, it's recommended that you run the `mbed dm init` command, which will install all needed credentials for both Connect and Update Pelion DM features. You can use the following command:
+```
+$ mbed dm init -d "<your company name in Pelion DM>" --model-name "<product model identifier>" -q --force
+```
+
 
 ### Test cases - Connect
 
