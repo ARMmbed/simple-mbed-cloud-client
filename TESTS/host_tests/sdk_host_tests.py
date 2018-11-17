@@ -24,6 +24,7 @@ import os
 import time
 import subprocess
 import re
+import signal
 
 DEFAULT_CYCLE_PERIOD = 1.0
 
@@ -180,22 +181,19 @@ class SDKTests(BaseHostTest):
     """
     Device Firmware update routines
     """
-    def terminate_fw_proc(self):
+    def firmware_campaign_cleanup(self):
         if self.firmware_proc:
-            process = psutil.Process(self.firmware_proc.pid)
-            if process:
-                for proc in process.children(recursive=True):
-                    proc.kill()
-                process.kill()
-            self.firmware_proc.kill()
+            os.kill(self.firmware_proc.pid, signal.CTRL_C_EVENT)
+            os.kill(self.firmware_proc.pid, signal.CTRL_BREAK_EVENT)
             self.firmware_proc.terminate()
             outs, errs = self.firmware_proc.communicate()
+            self.logger.prn_inf('Firmware campaign process killed: PID %s' % self.firmware_proc.pid)
             self.firmware_proc = None
 
     def _callback_firmware_ready(self, key, value, timestamp):
         if self.firmware_sent:
             # Firmware was sent, but wasn't applied if this callback is called
-            self.terminate_fw_proc()
+            self.firmware_campaign_cleanup()
             self.notify_complete(False)
         else:
             # Send device iteration number after a reset
@@ -219,9 +217,9 @@ class SDKTests(BaseHostTest):
             # Open the firmware update image as provided by the build system
             with open(update_image, 'rb') as f:
                 raw = f.read()
-            # Modify the initial "device_ready" sequence into a different one 
+            # Modify the initial "spdmc_ready_chk" sequence into "firmware_update" 
             # (matching the string length) as an indication that the firmware was changed/updated
-            #raw = re.sub(r'spdmc_ready_chk', r'firmware_update', raw)
+            raw = re.sub(r'spdmc_ready_chk', r'firmware_update', raw)
 
             # Save the firmware into a temp place. Manifest tool has issues handling very long paths even if -n is specified
             update_mod_image = re.sub(r'.*[\\/](.+)\.([a-z0-9]+)$', r'.\1_update_mod.\2.tmp', image)
@@ -235,10 +233,15 @@ class SDKTests(BaseHostTest):
 
         # Use non-blocking call, but remember the process, so we can kill it later
         try:
-            self.firmware_proc = subprocess.Popen(["mbed", "dm", "update", "device", "-p", update_mod_image, "-D", self.deviceID], stderr=subprocess.STDOUT)
+            spargs = dict()
+            if os.name == 'posix':
+                spargs['preexec_fn'] = os.setpgrp
+            elif os.name == 'nt':
+                spargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
+            self.firmware_proc = subprocess.Popen(["mbed", "dm", "update", "device", "-p", update_mod_image, "-D", self.deviceID], stderr=subprocess.STDOUT, **spargs)
         except Exception, e:
             self.logger.prn_err("ERROR: Unable to execute 'mbed dm' sub-command")
-            self.terminate_fw_proc()
+            self.firmware_campaign_cleanup()
             self.notify_complete(False)
             return -1
 
@@ -249,7 +252,7 @@ class SDKTests(BaseHostTest):
 
     def _callback_firmware_update(self, key, value, timestamp):
         self.logger.prn_inf("Firmware successfully updated!")
-        self.terminate_fw_proc()
+        self.firmware_campaign_cleanup()
         self.iteration = self.iteration + 1
         self.send_safe('iteration', self.iteration)
 

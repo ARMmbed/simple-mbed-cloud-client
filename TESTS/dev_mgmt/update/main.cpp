@@ -161,8 +161,8 @@ void spdmc_testsuite_connect(void) {
         wait_nb(100);
         logger("[INFO] Device successfully registered to Pelion DM.\r\n");
     } else {
-        logger("[ERROR] Device failed to register.\r\n");
         client_status = -1;
+        logger("[ERROR] Device failed to register.\r\n");
         greentea_send_kv("test_failed", 0);
     }
     if (iteration == 0) {
@@ -192,6 +192,7 @@ void spdmc_testsuite_connect(void) {
                 } else {
                     reg_status = -1;
                     logger("[ERROR] Device could not be verified as registered in Device Directory.\r\n");
+                    greentea_send_kv("test_failed", 0);
                 }
                 break;
             }
@@ -199,27 +200,30 @@ void spdmc_testsuite_connect(void) {
 
         GREENTEA_TESTCASE_FINISH("Pelion DM Directory", (reg_status == 0), (reg_status != 0));
 
-        GREENTEA_TESTCASE_START("Prepare Firmware");
-        wait_nb(500);
-        int fw_status;
-        greentea_send_kv("firmware_prepare", 1);
-        while (1) {
-            greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
-            if (strcmp(_key, "firmware_sent") == 0) {
-                if (atoi(_value)) {
-                    fw_status = 0;
-                } else {
-                    fw_status = -1;
-                    logger("[ERROR] While preparing firmware.\r\n");
+        if (reg_status == 0) {
+            GREENTEA_TESTCASE_START("Prepare Firmware");
+            wait_nb(500);
+            int fw_status;
+            greentea_send_kv("firmware_prepare", 1);
+            while (1) {
+                greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
+                if (strcmp(_key, "firmware_sent") == 0) {
+                    if (atoi(_value)) {
+                        fw_status = 0;
+                    } else {
+                        fw_status = -1;
+                        logger("[ERROR] While preparing firmware.\r\n");
+                    }
+                    break;
                 }
-                break;
             }
-        }
-        GREENTEA_TESTCASE_FINISH("Prepare Firmware", (fw_status == 0), (fw_status != 0));
+            GREENTEA_TESTCASE_FINISH("Prepare Firmware", (fw_status == 0), (fw_status != 0));
 
-        GREENTEA_TESTCASE_START("Download Firmware");
-        logger("[INFO] Update campaign has started.\r\n");
-        // The device should download firmware and reset at this stage
+            GREENTEA_TESTCASE_START("Download Firmware");
+            logger("[INFO] Update campaign has started.\r\n");
+            // The device should download firmware and reset at this stage
+        }
+
         while (1) {
             wait_nb(1000);
         }

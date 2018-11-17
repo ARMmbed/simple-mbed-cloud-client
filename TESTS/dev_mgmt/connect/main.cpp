@@ -179,8 +179,8 @@ void spdmc_testsuite_connect(void) {
         wait_nb(100);
         logger("[INFO] Device successfully registered to Pelion DM.\r\n");
     } else {
-        logger("[ERROR] Device failed to register.\r\n");
         client_status = -1;
+        logger("[ERROR] Device failed to register.\r\n");
         greentea_send_kv("test_failed", 0);
     }
     if (iteration == 0) {
@@ -210,6 +210,7 @@ void spdmc_testsuite_connect(void) {
                 } else {
                     reg_status = -1;
                     logger("[ERROR] Device could not be verified as registered in Device Directory.\r\n");
+                    greentea_send_kv("test_failed", 0);
                 }
                 break;
             }
@@ -217,14 +218,16 @@ void spdmc_testsuite_connect(void) {
 
         GREENTEA_TESTCASE_FINISH("Pelion DM Directory", (reg_status == 0), (reg_status != 0));
 
-        logger("[INFO] Resetting device.\r\n");
-        greentea_send_kv("test_advance", 0);
-        while (1) {
-            greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
+        if (reg_status == 0) {
+            logger("[INFO] Resetting device.\r\n");
+            greentea_send_kv("test_advance", 0);
+            while (1) {
+                greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
-            if (strcmp(_key, "reset") == 0) {
-                system_reset();
-                break;
+                if (strcmp(_key, "reset") == 0) {
+                    system_reset();
+                    break;
+                }
             }
         }
     } else {
