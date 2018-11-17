@@ -76,7 +76,7 @@ Simple Pelion DM Client provides Greentea tests to test your porting efforts.
 | `Pelion DM Bootstrap & Register` | Bootstraps the device and registers it for first time with Pelion Device Management. |
 | `Pelion DM Directory` | Verifies that a registered device appears in the Device Directory in Pelion Device Management. |
 | `Pelion DM Re-register` | Resets the device and re-registers with Pelion Device Management with previously bootstrapped credentials. |
-| `Consistent Identity` | Confirms that the device identity is preserved over a device reset, confirming that Root of Trust is stored in SOTP correctly. |
+| `Consistent Identity` | Verifies that the device identity is preserved over device reset, confirming that Root of Trust is stored in SOTP correctly. |
 | `LwM2M GET Test` | Confirms that Pelion DM API client can perform a GET request on an LwM2M resource. |
 | `LwM2M SET Test` | Sets/changes value from the device and confirms that Pelion DM API client can observe the value changing. |
 | `LwM2M PUT Test` | Confirms that Pelion DM API client can perform a PUT request on an LwM2M resource by setting a new value. |
@@ -92,9 +92,9 @@ Simple Pelion DM Client provides Greentea tests to test your porting efforts.
 | `Pelion DM Bootstrap & Register` | Bootstraps the device and registers it for first time with Pelion Device Management. |
 | `Pelion DM Directory` | Verifies that a registered device appears in the Device Directory in Pelion Device Management. |
 | `Prepare Firmware` | Prepares the firmware on the host side and calls `mbed dm` to initiate Pelion Device Management update campaign. |
-| `Download Firmware` | Downloads the firmware onto the devices, resets it and verifies that the firmware has been applied. |
-| `Pelion DM Re-register` | Resets the device and re-registers with Pelion Device Management with previously bootstrapped credentials. |
-| `Consistent Identity` | Confirms that the device identity is preserved over a device reset, confirming that Root of Trust is stored in SOTP correctly. |
+| `Download Firmware` | Downloads the firmware onto the device, resets it and verifies that the firmware has been applied. |
+| `Pelion DM Re-register` | Re-registers the device with Pelion Device Management using the new firmware and previously bootstrapped credentials. |
+| `Consistent Identity` | Verifies that the device identity is preserved over firmware update and device reset, confirming that Root of Trust is stored in SOTP correctly. |
 
 ### Requirements
  Simple Pelion DM tests rely on the Python SDK to test the end to end solution.
