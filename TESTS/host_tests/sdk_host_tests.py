@@ -37,6 +37,7 @@ class SDKTests(BaseHostTest):
     post_timeout = None
     firmware_proc = None
     firmware_sent = False
+    firmware_file = None
 
     def send_safe(self, key, value):
         #self.send_kv('dummy_start', 0)
@@ -189,6 +190,9 @@ class SDKTests(BaseHostTest):
             outs, errs = self.firmware_proc.communicate()
             self.logger.prn_inf('Firmware campaign process killed: PID %s' % self.firmware_proc.pid)
             self.firmware_proc = None
+        if self.firmware_file:
+            os.remove(self.firmware_file)
+            self.firmware_file = None
 
     def _callback_firmware_ready(self, key, value, timestamp):
         if self.firmware_sent:
@@ -205,6 +209,7 @@ class SDKTests(BaseHostTest):
             self.notify_complete(False)
             return -1
 
+        target = self.get_config_item('platform_name')
         image = self.get_config_item('image_path')
         update_image = re.sub(r'(.+)\.([a-z0-9]+)$', r'\1_update.\2', image if image else "")
         if not image or not os.path.exists(update_image):
@@ -222,7 +227,7 @@ class SDKTests(BaseHostTest):
             raw = re.sub(r'spdmc_ready_chk', r'firmware_update', raw)
 
             # Save the firmware into a temp place. Manifest tool has issues handling very long paths even if -n is specified
-            update_mod_image = re.sub(r'.*[\\/](.+)\.([a-z0-9]+)$', r'.\1_update_mod.\2.tmp', image)
+            update_mod_image = ".%s.%s.%s" % (target, re.sub(r'.*[\\/](.+)\.([a-z0-9]+)$', r'\1_update_mod.\2', image), time.time())
             with open(update_mod_image, 'wb') as f:
                 f.write(raw)
         except Exception, e:
@@ -239,6 +244,7 @@ class SDKTests(BaseHostTest):
             elif os.name == 'nt':
                 spargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
             self.firmware_proc = subprocess.Popen(["mbed", "dm", "update", "device", "-p", update_mod_image, "-D", self.deviceID], stderr=subprocess.STDOUT, **spargs)
+            self.firmware_file = update_mod_image
         except Exception, e:
             self.logger.prn_err("ERROR: Unable to execute 'mbed dm' sub-command")
             self.firmware_campaign_cleanup()
