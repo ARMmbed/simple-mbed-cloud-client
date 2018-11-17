@@ -184,7 +184,7 @@ class SDKTests(BaseHostTest):
         if not self.post_timeout:
             self.send_safe("post_test_executed", 0)
     
-    def _callback_send_firmware(self, key, value, timestamp):
+    def _callback_firmware_prepare(self, key, value, timestamp):
         if not self.deviceID:
             self.logger.prn_err("ERROR: No DeviceID")
             self.notify_complete(False)
@@ -192,7 +192,7 @@ class SDKTests(BaseHostTest):
 
         image = self.get_config_item('image_path')
         update_image = re.sub(r'(.+)\.([a-z0-9]+)$', r'\1_update.\2', image if image else "")
-        if  not image or not os.path.exists(update_image):
+        if not image or not os.path.exists(update_image):
             self.logger.prn_err("ERROR: No main or update image")
             self.notify_complete(False)
             return -1
@@ -201,10 +201,10 @@ class SDKTests(BaseHostTest):
         try:
             with open(update_image, 'rb') as f:
                 raw = f.read()
-            raw = re.sub(r'spdmc_ready_chk', r'firmare_updated', raw)
+            raw = re.sub(r'spdmc_ready_chk', r'firmware_update', raw)
 
             # save it
-            update_mod_image = re.sub(r'.*[\\/](.+)\.([a-z0-9]+)$', r'\1_update_mod.\2', image)
+            update_mod_image = re.sub(r'.*[\\/](.+)\.([a-z0-9]+)$', r'.\1_update_mod.\2.tmp', image)
             with open(update_mod_image, 'wb') as f:
                 f.write(raw)
         except Exception, e:
@@ -223,12 +223,16 @@ class SDKTests(BaseHostTest):
         self.logger.prn_inf("Firmware update campaign started. Check for download progress.")
 
 
-    def _callback_firmare_updated(self, key, value, timestamp):
+    def _callback_firmware_update(self, key, value, timestamp):
+        self.logger.prn_inf("Firmware successfully updated!")
         if self.subproc:
             self.subproc.kill()
             self.subproc = None
         self.iteration = self.iteration + 1
         self.send_safe('iteration', self.iteration)
+
+    def _callback_booted(self, key, value, timestamp):
+        self.send_safe('__sync', 0)
 
 
     def setup(self):
@@ -247,8 +251,9 @@ class SDKTests(BaseHostTest):
         self.register_callback('device_lwm2m_put_test', self._callback_device_lwm2m_put_verification)
         self.register_callback('device_lwm2m_post_test', self._callback_device_lwm2m_post_verification)
         self.register_callback('device_lwm2m_post_test_result', self._callback_device_lwm2m_post_verification_result)
-        self.register_callback('send_firmware', self._callback_send_firmware)
-        self.register_callback('firmare_updated', self._callback_firmare_updated)
+        self.register_callback('firmware_prepare', self._callback_firmware_prepare)
+        self.register_callback('firmware_update', self._callback_firmware_update)
+        self.register_callback('booted', self._callback_booted)
 
         # Setup API config
         try:

@@ -71,13 +71,13 @@ void spdmc_testsuite_connect(void) {
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Connect to Network");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Format Storage");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Simple PDMC Initialization");
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Register");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Bootstrap & Reg.");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Re-register");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Directory");
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Send firmware");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Prepare firmware");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Download firmware");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Consistent Identity");
     }
-
 
     // Start network connection test.
     GREENTEA_TESTCASE_START("Connect to Network");
@@ -156,8 +156,11 @@ void spdmc_testsuite_connect(void) {
     client.on_registered(&registered);
 
     // Register to Pelion Device Management.
-    GREENTEA_TESTCASE_START("Pelion DM Register");
-
+    if (iteration == 0) {
+        GREENTEA_TESTCASE_START("Pelion DM Bootstrap & Reg.");
+    } else {
+        GREENTEA_TESTCASE_START("Pelion DM Re-register");
+    }
     client.register_and_connect();
 
     int timeout = 30000;
@@ -177,7 +180,11 @@ void spdmc_testsuite_connect(void) {
         client_status = -1;
         greentea_send_kv("test_failed", 0);
     }
-    GREENTEA_TESTCASE_FINISH("Pelion DM Register", (client_status == 0), (client_status != 0));
+    if (iteration == 0) {
+        GREENTEA_TESTCASE_FINISH("Pelion DM Bootstrap & Reg.", (client_status == 0), (client_status != 0));
+    } else {
+        GREENTEA_TESTCASE_FINISH("Pelion DM Re-register", (client_status == 0), (client_status != 0));
+    }
 
     if (iteration == 0) {
         //Start registration status test
@@ -207,33 +214,33 @@ void spdmc_testsuite_connect(void) {
 
         GREENTEA_TESTCASE_FINISH("Pelion DM Directory", (reg_status == 0), (reg_status != 0));
 
-        GREENTEA_TESTCASE_START("Send firmware");
+        GREENTEA_TESTCASE_START("Prepare Firmware");
         wait_nb(500);
         int fw_status;
-        greentea_send_kv("send_firmware", 1);
+        greentea_send_kv("firmware_prepare", 1);
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
             if (strcmp(_key, "firmware_ready") == 0) {
                 if (atoi(_value)) {
                     fw_status = 0;
-                    logger("[INFO] Update campaign has started.\r\n");
                 } else {
                     fw_status = -1;
-                    logger("[ERROR] Update campaign has started.\r\n");
+                    logger("[ERROR] While preparing firmware.\r\n");
                 }
                 break;
             }
         }
-        GREENTEA_TESTCASE_FINISH("Send firmware", (fw_status == 0), (fw_status != 0));
+        GREENTEA_TESTCASE_FINISH("Prepare Firmware", (fw_status == 0), (fw_status != 0));
 
-        GREENTEA_TESTCASE_START("Download firmware");
+        GREENTEA_TESTCASE_START("Download Firmware");
+        logger("[INFO] Update campaign has started.\r\n");
         // The device should download firmware and reset at this stage
         while (1) {
             wait_nb(1000);
         }
     } else {
         //Start consistent identity test.
-        GREENTEA_TESTCASE_FINISH("Download firmware", true, false);
+        GREENTEA_TESTCASE_FINISH("Download Firmware", true, false);
 
         GREENTEA_TESTCASE_START("Consistent Identity");
         int identity_status;
@@ -273,6 +280,8 @@ int main(void) {
     //Create a thread to blink an LED and signal that the device is alive
     Thread thread;
     thread.start(led_thread);
+
+    greentea_send_kv("booted", 1);
 
     GREENTEA_SETUP(300, "sdk_host_tests");
     spdmc_testsuite_connect();
