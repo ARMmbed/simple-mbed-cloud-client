@@ -74,8 +74,8 @@ void spdmc_testsuite_connect(void) {
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Bootstrap & Reg.");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Re-register");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Directory");
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Prepare firmware");
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Download firmware");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Prepare Firmware");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Download Firmware");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Consistent Identity");
     }
 
