@@ -45,11 +45,6 @@ void registered(const ConnectorClientEndpointInfo *endpoint) {
     endpointInfo = endpoint;
 }
 
-void post_test_callback(MbedCloudClientResource *resource, const uint8_t *buffer, uint16_t size) {
-    logger("[INFO] POST test callback executed.\r\n");
-    greentea_send_kv("device_lwm2m_post_test_result", 0);
-}
-
 void spdmc_testsuite_connect(void) {
     int iteration = 0;
     char _key[20] = { };
@@ -142,16 +137,6 @@ void spdmc_testsuite_connect(void) {
     res_get_test->methods(M2MMethod::GET);
     res_get_test->set_value("test0");
 
-    MbedCloudClientResource *res_put_test;
-    res_put_test = client.create_resource("5000/0/2", "put_resource");
-    res_put_test->methods(M2MMethod::PUT | M2MMethod::GET);
-    res_put_test->set_value(1);
-
-    MbedCloudClientResource *res_post_test;
-    res_post_test = client.create_resource("5000/0/3", "post_resource");
-    res_post_test->methods(M2MMethod::POST);
-    res_post_test->attach_post_callback(post_test_callback);
-
     // Set client callback to report endpoint name.
     client.on_registered(&registered);
 
@@ -196,11 +181,11 @@ void spdmc_testsuite_connect(void) {
 
         // Start host tests with device id
         logger("[INFO] Starting Pelion DM verification using Python SDK...\r\n");
-        greentea_send_kv("device_api_registration", endpointInfo->internal_endpoint_name.c_str());
+        greentea_send_kv("verify_registration", endpointInfo->internal_endpoint_name.c_str());
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
-            if (strcmp(_key, "registration") == 0) {
+            if (strcmp(_key, "registered") == 0) {
                 if (atoi(_value)) {
                     reg_status = 0;
                     logger("[INFO] Device is registered in the Device Directory.\r\n");
@@ -220,7 +205,7 @@ void spdmc_testsuite_connect(void) {
         greentea_send_kv("firmware_prepare", 1);
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
-            if (strcmp(_key, "firmware_ready") == 0) {
+            if (strcmp(_key, "firmware_sent") == 0) {
                 if (atoi(_value)) {
                     fw_status = 0;
                 } else {
@@ -250,11 +235,11 @@ void spdmc_testsuite_connect(void) {
 
         // Wait for Host Test to verify consistent device ID (blocking here)
         logger("[INFO] Verifying consistent Device ID...\r\n");
-        greentea_send_kv("device_verification", endpointInfo->internal_endpoint_name.c_str());
+        greentea_send_kv("verify_identity", endpointInfo->internal_endpoint_name.c_str());
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
-            if (strcmp(_key, "verification") == 0) {
+            if (strcmp(_key, "verified") == 0) {
                 if (atoi(_value)) {
                     identity_status = 0;
                     logger("[INFO] Device ID consistent, SOTP and Secure Storage is preserved correctly.\r\n");
@@ -281,7 +266,7 @@ int main(void) {
     Thread thread;
     thread.start(led_thread);
 
-    greentea_send_kv("booted", 1);
+    greentea_send_kv("device_booted", 1);
 
     GREENTEA_SETUP(300, "sdk_host_tests");
     spdmc_testsuite_connect();

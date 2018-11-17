@@ -47,7 +47,7 @@ void registered(const ConnectorClientEndpointInfo *endpoint) {
 
 void post_test_callback(MbedCloudClientResource *resource, const uint8_t *buffer, uint16_t size) {
     logger("[INFO] POST test callback executed.\r\n");
-    greentea_send_kv("device_lwm2m_post_test_result", 0);
+    greentea_send_kv("verify_lwm2m_post_test_result", 0);
 }
 
 void spdmc_testsuite_connect(void) {
@@ -199,11 +199,11 @@ void spdmc_testsuite_connect(void) {
 
         // Start host tests with device id
         logger("[INFO] Starting Pelion DM verification using Python SDK...\r\n");
-        greentea_send_kv("device_api_registration", endpointInfo->internal_endpoint_name.c_str());
+        greentea_send_kv("verify_registration", endpointInfo->internal_endpoint_name.c_str());
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
-            if (strcmp(_key, "registration") == 0) {
+            if (strcmp(_key, "registered") == 0) {
                 if (atoi(_value)) {
                     reg_status = 0;
                     logger("[INFO] Device is registered in the Device Directory.\r\n");
@@ -237,11 +237,11 @@ void spdmc_testsuite_connect(void) {
 
         // Wait for Host Test to verify consistent device ID (blocking here)
         logger("[INFO] Verifying consistent Device ID...\r\n");
-        greentea_send_kv("device_verification", endpointInfo->internal_endpoint_name.c_str());
+        greentea_send_kv("verify_identity", endpointInfo->internal_endpoint_name.c_str());
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
-            if (strcmp(_key, "verification") == 0) {
+            if (strcmp(_key, "verified") == 0) {
                 if (atoi(_value)) {
                     identity_status = 0;
                     logger("[INFO] Device ID consistent, SOTP and Secure Storage is preserved correctly.\r\n");
@@ -265,7 +265,7 @@ void spdmc_testsuite_connect(void) {
         GREENTEA_TESTCASE_START("LwM2M GET Test");
         int get_status;
         // Read original value of /5000/0/1 and wait for Host Test to verify it read the value and send it back.
-        greentea_send_kv("device_lwm2m_get_test", "/5000/0/1");
+        greentea_send_kv("verify_lwm2m_get_test", "/5000/0/1");
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
@@ -295,7 +295,7 @@ void spdmc_testsuite_connect(void) {
         // Update resource /5000/0/1 from client and observe value
         res_get_test->set_value("test1");
 
-        greentea_send_kv("device_lwm2m_set_test", "/5000/0/1");
+        greentea_send_kv("verify_lwm2m_set_test", "/5000/0/1");
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
@@ -326,7 +326,7 @@ void spdmc_testsuite_connect(void) {
         int updated_res_value;
 
         // Observe resource /5000/0/2 from cloud, add +5, and confirm value is correct on client
-        greentea_send_kv("device_lwm2m_put_test", "/5000/0/2");
+        greentea_send_kv("verify_lwm2m_put_test", "/5000/0/2");
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
@@ -361,7 +361,7 @@ void spdmc_testsuite_connect(void) {
         int post_status;
 
         logger("[INFO] Executing POST on /5000/0/3 and waiting for callback function\r\n.");
-        greentea_send_kv("device_lwm2m_post_test", "/5000/0/3");
+        greentea_send_kv("verify_lwm2m_post_test", "/5000/0/3");
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
@@ -396,6 +396,8 @@ int main(void) {
     //Create a thread to blink an LED and signal that the device is alive
     Thread thread;
     thread.start(led_thread);
+
+    greentea_send_kv("device_booted", 1);
 
     GREENTEA_SETUP(210, "sdk_host_tests");
     spdmc_testsuite_connect();
