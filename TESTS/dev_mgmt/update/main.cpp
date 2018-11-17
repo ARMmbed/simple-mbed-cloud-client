@@ -55,7 +55,7 @@ void spdmc_testsuite_connect(void) {
     char _key[20] = { };
     char _value[128] = { };
 
-    greentea_send_kv("device_ready", true);
+    greentea_send_kv("spdmc_ready_chk", true);
     while (1) {
         greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
@@ -73,11 +73,9 @@ void spdmc_testsuite_connect(void) {
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Simple PDMC Initialization");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Register");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Directory");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Send firmware");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Download firmware");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Consistent Identity");
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "LwM2M GET Test");
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "LwM2M SET Test");
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "LwM2M PUT Test");
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "LwM2M POST Test");
     }
 
 
@@ -209,18 +207,34 @@ void spdmc_testsuite_connect(void) {
 
         GREENTEA_TESTCASE_FINISH("Pelion DM Directory", (reg_status == 0), (reg_status != 0));
 
-        logger("[INFO] Resetting device.\r\n");
-        greentea_send_kv("test_advance", 0);
+        GREENTEA_TESTCASE_START("Send firmware");
+        wait_nb(500);
+        int fw_status;
+        greentea_send_kv("send_firmware", 1);
         while (1) {
             greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
-
-            if (strcmp(_key, "reset") == 0) {
-                system_reset();
+            if (strcmp(_key, "firmware_ready") == 0) {
+                if (atoi(_value)) {
+                    fw_status = 0;
+                    logger("[INFO] Update campaign has started.\r\n");
+                } else {
+                    fw_status = -1;
+                    logger("[ERROR] Update campaign has started.\r\n");
+                }
                 break;
             }
         }
+        GREENTEA_TESTCASE_FINISH("Send firmware", (fw_status == 0), (fw_status != 0));
+
+        GREENTEA_TESTCASE_START("Download firmware");
+        // The device should download firmware and reset at this stage
+        while (1) {
+            wait_nb(1000);
+        }
     } else {
         //Start consistent identity test.
+        GREENTEA_TESTCASE_FINISH("Download firmware", true, false);
+
         GREENTEA_TESTCASE_START("Consistent Identity");
         int identity_status;
 
@@ -247,139 +261,10 @@ void spdmc_testsuite_connect(void) {
 
         GREENTEA_TESTCASE_FINISH("Consistent Identity", (identity_status == 0), (identity_status != 0));
 
-        // LwM2M tests
-        logger("[INFO] Beginning LwM2M resource tests.\r\n");
-
-
-        wait_nb(500);
-        // ---------------------------------------------
-        // GET test
-        GREENTEA_TESTCASE_START("LwM2M GET Test");
-        int get_status;
-        // Read original value of /5000/0/1 and wait for Host Test to verify it read the value and send it back.
-        greentea_send_kv("device_lwm2m_get_test", "/5000/0/1");
-        while (1) {
-            greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
-
-            if (strcmp(_key, "get_value") == 0) {
-                if (strcmp(_value, "test0") == 0) {
-                    get_status = 0;
-                    logger("[INFO] Original value of LwM2M resource /5000/0/1 is read correctly\r\n");
-                } else {
-                    get_status = -1;
-                    logger("[ERROR] Wrong value reported in Pelion DM.\r\n");
-                }
-                break;
-            } else if (strcmp(_key, "timeout") == 0) {
-                get_status = -1;
-                logger("[ERROR] Observation of LwM2M resource /5000/0/1 timed out.\r\n");
-                break;
-            }
-        }
-        GREENTEA_TESTCASE_FINISH("LwM2M GET Test", (get_status == 0), (get_status != 0));
-
-
-        wait_nb(500);
-        // ---------------------------------------------
-        // SET test
-        GREENTEA_TESTCASE_START("LwM2M SET Test");
-        int set_status;
-        // Update resource /5000/0/1 from client and observe value
-        res_get_test->set_value("test1");
-
-        greentea_send_kv("device_lwm2m_set_test", "/5000/0/1");
-        while (1) {
-            greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
-
-            if (strcmp(_key, "set_value") == 0) {
-                if (strcmp(_value, "test1") == 0) {
-                    set_status = 0;
-                    logger("[INFO] Changed value of LwM2M resource /5000/0/1 is observed correctly\r\n");
-                } else {
-                    set_status = -1;
-                    logger("[ERROR] Wrong value observed in Pelion DM.\r\n");
-                }
-                break;
-            } else if (strcmp(_key, "timeout") == 0) {
-                set_status = -1;
-                logger("[ERROR] Observation of LwM2M resource /5000/0/1 timed out.\r\n");
-                break;
-            }
-        }
-        GREENTEA_TESTCASE_FINISH("LwM2M SET Test", (set_status == 0), (set_status != 0));
-
-
-        wait_nb(500);
-        // ---------------------------------------------
-        // PUT Test
-        GREENTEA_TESTCASE_START("LwM2M PUT Test");
-        int put_status;
-        int current_res_value;
-        int updated_res_value;
-
-        // Observe resource /5000/0/2 from cloud, add +5, and confirm value is correct on client
-        greentea_send_kv("device_lwm2m_put_test", "/5000/0/2");
-        while (1) {
-            greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
-
-            if (strcmp(_key, "res_set") == 0) {
-                // Get updated value from host test.
-                updated_res_value = atoi(_value);
-                // Get current value from resource.
-                current_res_value = res_put_test->get_value_int();
-
-                if (updated_res_value == current_res_value) {
-                    put_status = 0;
-                    logger("[INFO] Value of resource /5000/0/2 successfully changed from the cloud using PUT.\r\n");
-                } else {
-                    put_status = -1;
-                    logger("[ERROR] Wrong value read from device after resource update.\r\n");
-                }
-                break;
-            } else if (strcmp(_key, "timeout") == 0) {
-                put_status = -1;
-                logger("[ERROR] PUT of LwM2M resource /5000/0/2 timed out.\r\n");
-                break;
-            }
-        }
-
-        GREENTEA_TESTCASE_FINISH("LwM2M PUT Test", (put_status == 0), (put_status != 0));
-
-
-        wait_nb(500);
-        // ---------------------------------------------
-        // POST test
-        GREENTEA_TESTCASE_START("LwM2M POST Test");
-        int post_status;
-
-        logger("[INFO] Executing POST on /5000/0/3 and waiting for callback function\r\n.");
-        greentea_send_kv("device_lwm2m_post_test", "/5000/0/3");
-        while (1) {
-            greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
-
-            if (strcmp(_key, "post_test_executed") == 0) {
-                int result = atoi(_value);
-                if (result == 0) {
-                    post_status = 0;
-                    logger("[INFO] Callback on resource /5000/0/3 executed successfully.\r\n");
-                } else {
-                    post_status = -1;
-                    logger("[ERROR] Callback on resource /5000/0/3 failed.\r\n");
-                }
-                break;
-            } else if (strcmp(_key, "timeout") == 0) {
-                post_status = -1;
-                logger("[ERROR] POST of LwM2M resource /5000/0/3 timed out.\r\n");
-                break;
-            }
-        }
-
-        GREENTEA_TESTCASE_FINISH("LwM2M POST Test", (post_status == 0), (post_status != 0));
-
-        GREENTEA_TESTSUITE_RESULT((get_status == 0) && (set_status == 0) && (put_status == 0) && (post_status == 0));
+        GREENTEA_TESTSUITE_RESULT(identity_status == 0);
 
         while (1) {
-            wait(1);
+            wait_nb(1000);
         }
     }
 }
@@ -389,7 +274,7 @@ int main(void) {
     Thread thread;
     thread.start(led_thread);
 
-    GREENTEA_SETUP(210, "sdk_host_tests");
+    GREENTEA_SETUP(300, "sdk_host_tests");
     spdmc_testsuite_connect();
 
     return 0;

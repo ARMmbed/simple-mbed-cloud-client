@@ -17,6 +17,7 @@
 ## ----------------------------------------------------------------------------
 
 from mbed_host_tests import BaseHostTest
+from mbed_host_tests.host_tests_logger import HtrunLogger
 from mbed_cloud.device_directory import DeviceDirectoryAPI
 from mbed_cloud.connect import ConnectAPI
 import os
@@ -34,6 +35,7 @@ class SDKTests(BaseHostTest):
     deviceID = None
     iteration = None
     post_timeout = None
+    subproc = None
 
     def send_safe(self, key, value):
         #self.send_kv('dummy_start', 0)
@@ -62,7 +64,7 @@ class SDKTests(BaseHostTest):
         # Send device iteration number after a reset
         self.send_safe('iteration', self.iteration)
     
-    def _callback_advance_test(self, key, value, timestamp):
+    def _callback_test_advance(self, key, value, timestamp):
         # Advance test sequence
         try: 
             if self.test_steps_sequence.send(None):
@@ -88,7 +90,7 @@ class SDKTests(BaseHostTest):
         # Send true if old DeviceID is the same as current device is
         self.send_safe("verification", 1 if self.deviceID == value else 0)
         
-    def _callback_fail_test(self, key, value, timestamp):
+    def _callback_test_failed(self, key, value, timestamp):
         # Test failed. End it.
         self.notify_complete(False)
         
@@ -181,6 +183,53 @@ class SDKTests(BaseHostTest):
         # a failure. Don't send this value.
         if not self.post_timeout:
             self.send_safe("post_test_executed", 0)
+    
+    def _callback_send_firmware(self, key, value, timestamp):
+        if not self.deviceID:
+            self.logger.prn_err("ERROR: No DeviceID")
+            self.notify_complete(False)
+            return -1
+
+        image = self.get_config_item('image_path')
+        update_image = re.sub(r'(.+)\.([a-z0-9]+)$', r'\1_update.\2', image if image else "")
+        if  not image or not os.path.exists(update_image):
+            self.logger.prn_err("ERROR: No main or update image")
+            self.notify_complete(False)
+            return -1
+        self.logger.prn_inf('Found FW update image: "%s"' % update_image)
+
+        try:
+            with open(update_image, 'rb') as f:
+                raw = f.read()
+            raw = re.sub(r'spdmc_ready_chk', r'firmare_updated', raw)
+
+            # save it
+            update_mod_image = re.sub(r'.*[\\/](.+)\.([a-z0-9]+)$', r'\1_update_mod.\2', image)
+            with open(update_mod_image, 'wb') as f:
+                f.write(raw)
+        except Exception, e:
+            self.logger.prn_err("ERROR: While preparing modified image")
+            self.notify_complete(False)
+            return -1
+        self.logger.prn_inf('Modified FW update image: "%s"' % update_mod_image)
+
+        try:
+            self.subproc = subprocess.Popen(["mbed", "dm", "update", "device", "-p", update_mod_image, "-D", self.deviceID], stderr=subprocess.STDOUT)
+        except Exception, e:
+            self.logger.prn_err("ERROR: Unable to execute 'mbed dm' sub-command")
+            return -1
+
+        self.send_safe('firmware_ready', 1)
+        self.logger.prn_inf("Firmware update campaign started. Check for download progress.")
+
+
+    def _callback_firmare_updated(self, key, value, timestamp):
+        if self.subproc:
+            self.subproc.kill()
+            self.subproc = None
+        self.iteration = self.iteration + 1
+        self.send_safe('iteration', self.iteration)
+
 
     def setup(self):
         #Start at iteration 0
@@ -188,33 +237,36 @@ class SDKTests(BaseHostTest):
         
         # Register callbacks from GT tests
         self.register_callback('device_api_registration', self._callback_device_api_registration)
-        self.register_callback('advance_test', self._callback_advance_test)
         self.register_callback('device_ready', self._callback_device_ready)
+        self.register_callback('spdmc_ready_chk', self._callback_device_ready)
+        self.register_callback('test_advance', self._callback_test_advance)
+        self.register_callback('test_failed', self._callback_test_failed)
         self.register_callback('device_verification', self._callback_device_verification)
-        self.register_callback('fail_test', self._callback_fail_test)
         self.register_callback('device_lwm2m_get_test', self._callback_device_lwm2m_get_verification)
         self.register_callback('device_lwm2m_set_test', self._callback_device_lwm2m_set_verification)
         self.register_callback('device_lwm2m_put_test', self._callback_device_lwm2m_put_verification)
         self.register_callback('device_lwm2m_post_test', self._callback_device_lwm2m_post_verification)
         self.register_callback('device_lwm2m_post_test_result', self._callback_device_lwm2m_post_verification_result)
-        
+        self.register_callback('send_firmware', self._callback_send_firmware)
+        self.register_callback('firmare_updated', self._callback_firmare_updated)
+
         # Setup API config
         try:
             result = subprocess.check_output(["mbed", "config", "--list"], \
                                             stderr=subprocess.STDOUT)
         except Exception, e:
-            print "Error: CLOUD_SDK_API_KEY global config is not set: " + str(e)
+            self.logger.prn_err("ERROR: CLOUD_SDK_API_KEY global config is not set: " + str(e))
             return -1
 
         match = re.search(r'CLOUD_SDK_API_KEY=(.*)\n', result)
         if match == None:
-            print "Error: CLOUD_SDK_API_KEY global config is not set."
+            self.logger.prn_err("ERROR: CLOUD_SDK_API_KEY global config is not set.")
             return -1
 
         api_key_val = match.group(1).strip()
 
         # Get API KEY and remove LF char if included
-        print "CLOUD_SDK_API_KEY: " + api_key_val
+        self.logger.prn_inf("CLOUD_SDK_API_KEY: " + api_key_val)
 
         api_config = {"api_key" : api_key_val, "host" : "https://api.us-east-1.mbedcloud.com"}
         
@@ -239,3 +291,4 @@ class SDKTests(BaseHostTest):
         
         self.test_steps_sequence = self.test_steps()
         self.test_steps_sequence.send(None)
+        self.logger = HtrunLogger('TEST')
