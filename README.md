@@ -66,20 +66,35 @@ This library is a simpler interface to Pelion DM Client, making it trivial to ex
 
 Simple Pelion DM Client provides Greentea tests to test your porting efforts.
 
-### Test cases
+### Test cases - Connect
 
 | **Test case** | **Description** |
 | ------------- | ------------- |
 | `Connect to Network` | Tests the connection to the network via network interface. |
 | `Format Storage` | Tests that a successful storage format occurs and storage is configured correctly. |
 | `Simple MCC Initialization` | Verifies that SPDMC can be initialized with the given network, storage, and filesystem configuration. This is where the FCU and KCM configuration is written to storage and the Root of Trust is written to SOTP. |
-| `Pelion DM Register` | Confirms the device is registered to Pelion Device Management from using the Pelion DM REST API. |
+| `Pelion DM Bootstrap & Register` | Bootstraps the device and registers it for first time with Pelion Device Management. |
 | `Pelion DM Directory` | Verifies that a registered device appears in the Device Directory in Pelion Device Management. |
+| `Pelion DM Re-register` | Resets the device and re-registers with Pelion Device Management with previously bootstrapped credentials. |
 | `Consistent Identity` | Confirms that the device identity is preserved over a device reset, confirming that Root of Trust is stored in SOTP correctly. |
 | `LwM2M GET Test` | Confirms that Pelion DM API client can perform a GET request on an LwM2M resource. |
 | `LwM2M SET Test` | Sets/changes value from the device and confirms that Pelion DM API client can observe the value changing. |
 | `LwM2M PUT Test` | Confirms that Pelion DM API client can perform a PUT request on an LwM2M resource by setting a new value. |
 | `LwM2M POST Test` | Confirms that Pelion DM API client can execute a POST on an LwM2M resource and the callback function on the device is called. |
+
+### Test cases - Update
+
+| **Test case** | **Description** |
+| ------------- | ------------- |
+| `Connect to Network` | Tests the connection to the network via network interface. |
+| `Format Storage` | Tests that a successful storage format occurs and storage is configured correctly. |
+| `Simple MCC Initialization` | Verifies that SPDMC can be initialized with the given network, storage, and filesystem configuration. This is where the FCU and KCM configuration is written to storage and the Root of Trust is written to SOTP. |
+| `Pelion DM Bootstrap & Register` | Bootstraps the device and registers it for first time with Pelion Device Management. |
+| `Pelion DM Directory` | Verifies that a registered device appears in the Device Directory in Pelion Device Management. |
+| `Prepare Firmware` | Prepares the firmware on the host side and calls `mbed dm` to initiate Pelion Device Management update campaign. |
+| `Download Firmware` | Downloads the firmware onto the devices, resets it and verifies that the firmware has been applied. |
+| `Pelion DM Re-register` | Resets the device and re-registers with Pelion Device Management with previously bootstrapped credentials. |
+| `Consistent Identity` | Confirms that the device identity is preserved over a device reset, confirming that Root of Trust is stored in SOTP correctly. |
 
 ### Requirements
  Simple Pelion DM tests rely on the Python SDK to test the end to end solution.

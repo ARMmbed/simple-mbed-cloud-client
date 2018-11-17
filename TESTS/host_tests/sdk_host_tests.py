@@ -180,14 +180,23 @@ class SDKTests(BaseHostTest):
     """
     Device Firmware update routines
     """
+    def terminate_fw_proc(self):
+        if self.firmware_proc:
+            process = psutil.Process(self.firmware_proc.pid)
+            if process:
+                for proc in process.children(recursive=True):
+                    proc.kill()
+                process.kill()
+            self.firmware_proc.kill()
+            self.firmware_proc.terminate()
+            outs, errs = self.firmware_proc.communicate()
+            self.firmware_proc = None
+
     def _callback_firmware_ready(self, key, value, timestamp):
         if self.firmware_sent:
             # Firmware was sent, but wasn't applied if this callback is called
-            if self.firmware_proc:
-                self.firmware_proc.kill()
-                self.firmware_proc = None
+            self.terminate_fw_proc()
             self.notify_complete(False)
-            return -1
         else:
             # Send device iteration number after a reset
             self.send_safe('iteration', self.iteration)
@@ -229,6 +238,8 @@ class SDKTests(BaseHostTest):
             self.firmware_proc = subprocess.Popen(["mbed", "dm", "update", "device", "-p", update_mod_image, "-D", self.deviceID], stderr=subprocess.STDOUT)
         except Exception, e:
             self.logger.prn_err("ERROR: Unable to execute 'mbed dm' sub-command")
+            self.terminate_fw_proc()
+            self.notify_complete(False)
             return -1
 
         # At this point the firmware should be on it's way to the device
@@ -238,12 +249,14 @@ class SDKTests(BaseHostTest):
 
     def _callback_firmware_update(self, key, value, timestamp):
         self.logger.prn_inf("Firmware successfully updated!")
-        if self.firmware_proc:
-            self.firmware_proc.kill()
-            self.firmware_proc = None
+        self.terminate_fw_proc()
         self.iteration = self.iteration + 1
         self.send_safe('iteration', self.iteration)
 
+
+    """
+    Host setup routines
+    """
     def setup(self):
         # Generic test routines
         self.register_callback('device_booted', self._callback_device_booted)
