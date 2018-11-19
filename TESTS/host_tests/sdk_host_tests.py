@@ -190,9 +190,14 @@ class SDKTests(BaseHostTest):
             outs, errs = self.firmware_proc.communicate()
             self.logger.prn_inf('Firmware campaign process killed: PID %s' % self.firmware_proc.pid)
             self.firmware_proc = None
-        if self.firmware_file:
-            os.remove(self.firmware_file)
-            self.firmware_file = None
+
+            try:
+                time.sleep(1) # let the manifest-tool sub-process die gracefully
+                if self.firmware_file:
+                    os.remove(self.firmware_file)
+                    self.firmware_file = None
+            except Exception, e:
+                pass
 
     def _callback_firmware_ready(self, key, value, timestamp):
         if self.firmware_sent:
@@ -321,6 +326,8 @@ class SDKTests(BaseHostTest):
         # Delete device from directory so as not to hit device allocation quota.
         if self.deviceID:
             self.deviceApi.delete_device(self.deviceID)
+        self.firmware_campaign_cleanup()
+
         pass
 
     def __init__(self):
