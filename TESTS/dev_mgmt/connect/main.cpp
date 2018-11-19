@@ -402,7 +402,7 @@ int main(void) {
 
     greentea_send_kv("device_booted", 1);
 
-    GREENTEA_SETUP(210, "sdk_host_tests");
+    GREENTEA_SETUP(240, "sdk_host_tests");
     spdmc_testsuite_connect();
 
     return 0;
