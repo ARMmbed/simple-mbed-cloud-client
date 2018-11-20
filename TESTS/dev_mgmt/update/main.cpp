@@ -3,6 +3,9 @@
 #include "simple-mbed-cloud-client.h"
 #include "greentea-client/test_env.h"
 
+uint32_t test_timeout = 15*60;
+
+// Heartbeat blinky (to indicate that the board is still alive)
 DigitalOut led1(LED1);
 DigitalOut led2(LED2);
 void led_thread() {
@@ -16,10 +19,7 @@ void led_thread() {
 }
 RawSerial pc(USBTX, USBRX);
 
-// Default storage definition.
-BlockDevice* bd = BlockDevice::get_default_instance();
-FATFileSystem fs("fs", bd);
-
+// Output / logging
 void wait_nb(uint16_t ms) {
     while (ms > 0) {
         ms--;
@@ -38,31 +38,62 @@ void logger(const char* message) {
     wait_nb(10);
 }
 
+uint32_t sec2hr(uint32_t sec) {
+    return sec / (60 * 60);
+}
+uint32_t sec2min(uint32_t sec) {
+    return (sec / 60) % 60;
+}
+uint32_t sec2sec(uint32_t sec) {
+    return sec % 60;
+}
+
+uint32_t dl_last_rpercent = 0;
+bool dl_started = false;
+Timer dl_timer;
+void update_progress(uint32_t progress, uint32_t total) {
+    if (!dl_started) {
+        dl_started = true;
+        dl_timer.start();
+        pc.printf("[INFO] Firmware download started. Size: %.2fKB\r\n", float(total) / 1024);
+    } else {
+        float speed = float(progress) / dl_timer.read();
+        float percent = float(progress) * 100 / float(total);
+        uint32_t time_left = (total - progress) / speed;
+        pc.printf("[INFO] Downloading: %.2f%% (%.2fKB/s, ETA: %02d:%02d:%02d)\r\n",
+            percent, speed / 1024, sec2hr(time_left), sec2min(time_left), sec2sec(time_left));
+
+        // // this is disabled until htrun is extended to support dynamic change of the duration of tests
+        // // see https://github.com/ARMmbed/htrun/pull/228
+        // // extend the timeout of the test based on current progress
+        // uint32_t round_percent = progress * 100 / total;
+        // if (round_percent != dl_last_rpercent) {
+        //     dl_last_rpercent = round_percent;
+        //     uint32_t new_timeout = test_timeout + int(dl_timer.read() * (round_percent + 1) / round_percent);
+        //     greentea_send_kv("__timeout_set", new_timeout);
+        // }
+    }
+
+    if (progress == total) {
+        dl_timer.stop();
+        dl_started = false;
+        pc.printf("[INFO] Firmware download completed. %.2fKB in %.2f seconds (%.2fKB/s)\r\n",
+            float(total) / 1024, dl_timer.read(), float(total) / dl_timer.read() / 1024);
+        GREENTEA_TESTCASE_FINISH("Download Firmware", true, false);
+        GREENTEA_TESTCASE_START("Apply Firmware");
+    }
+}
+
+
+// Default storage and callbacks
+BlockDevice* bd = BlockDevice::get_default_instance();
+FATFileSystem fs("fs", bd);
+
 static const ConnectorClientEndpointInfo* endpointInfo;
 void registered(const ConnectorClientEndpointInfo *endpoint) {
     logger("[INFO] Connected to Pelion Device Management. Device ID: %s\n",
             endpoint->internal_endpoint_name.c_str());
     endpointInfo = endpoint;
-}
-
-bool dl_started = false;
-Timer dl_timer;
-void update_progress(uint32_t progress, uint32_t total) {
-    float percent = float(progress) * 100 / float(total);
-    if (!dl_started) {
-        dl_started = true;
-        dl_timer.start();
-        printf("[INFO] Firmware download started. Size: %.2fKB\r\n", float(total) / 1024);
-    } else {
-        printf("[INFO] Downloading: %.2f%% (%.2fKB/s)\r\n", percent, float(progress) / dl_timer.read() / 1024);
-    }
-    //greentea_send_kv("firmware_progress", percent);
-
-    if (progress == total) {
-        dl_timer.stop();
-        dl_started = false;
-        printf("[INFO] Firmware download completed. %.2fKB in %.2f seconds (%.2fKB/s)\r\n", float(total) / 1024, dl_timer.read(), float(total) / dl_timer.read() / 1024);
-    }
 }
 
 void spdmc_testsuite_update(void) {
@@ -87,10 +118,11 @@ void spdmc_testsuite_update(void) {
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Format Storage");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Simple PDMC Initialization");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Bootstrap & Reg.");
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Re-register");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Directory");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Prepare Firmware");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Download Firmware");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Apply Firmware");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Re-register");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Consistent Identity");
     }
 
@@ -248,9 +280,9 @@ void spdmc_testsuite_update(void) {
             wait_nb(1000);
         }
     } else {
-        //Start consistent identity test.
-        GREENTEA_TESTCASE_FINISH("Download Firmware", true, false);
+        GREENTEA_TESTCASE_FINISH("Apply Firmware", true, false);
 
+        //Start consistent identity test.
         GREENTEA_TESTCASE_START("Consistent Identity");
         int identity_status;
 
@@ -292,7 +324,7 @@ int main(void) {
 
     greentea_send_kv("device_booted", 1);
 
-    GREENTEA_SETUP(15*60, "sdk_host_tests");
+    GREENTEA_SETUP(test_timeout, "sdk_host_tests");
     spdmc_testsuite_update();
 
     return 0;

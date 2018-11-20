@@ -96,7 +96,8 @@ $ mbed dm init -d "<your company name in Pelion DM>" --model-name "<product mode
 | `Pelion DM Bootstrap & Register` | Bootstraps the device and registers it for first time with Pelion Device Management. |
 | `Pelion DM Directory` | Verifies that a registered device appears in the Device Directory in Pelion Device Management. |
 | `Prepare Firmware` | Prepares the firmware on the host side and calls `mbed dm` to initiate Pelion Device Management update campaign. |
-| `Download Firmware` | Downloads the firmware onto the device, resets it and verifies that the firmware has been applied. |
+| `Download Firmware` | Downloads the firmware onto the device. |
+| `Apply Firmware` | Reset the device, verifies that the firmware has correct checksum, applies it and re-verifies the applied firmware checksum. |
 | `Pelion DM Re-register` | Re-registers the device with Pelion Device Management using the new firmware and previously bootstrapped credentials. |
 | `Consistent Identity` | Verifies that the device identity is preserved over firmware update and device reset, confirming that Root of Trust is stored in SOTP correctly. |
 
