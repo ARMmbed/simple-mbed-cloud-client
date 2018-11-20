@@ -45,7 +45,27 @@ void registered(const ConnectorClientEndpointInfo *endpoint) {
     endpointInfo = endpoint;
 }
 
-void spdmc_testsuite_connect(void) {
+bool dl_started = false;
+Timer dl_timer;
+void update_progress(uint32_t progress, uint32_t total) {
+    float percent = float(progress) * 100 / float(total);
+    if (!dl_started) {
+        dl_started = true;
+        dl_timer.start();
+        printf("[INFO] Firmware download started. Size: %.2fKB\r\n", float(total) / 1024);
+    } else {
+        printf("[INFO] Downloading: %.2f%% (%.2fKB/s)\r\n", percent, float(progress) / dl_timer.read() / 1024);
+    }
+    //greentea_send_kv("firmware_progress", percent);
+
+    if (progress == total) {
+        dl_timer.stop();
+        dl_started = false;
+        printf("[INFO] Firmware download completed. %.2fKB in %.2f seconds (%.2fKB/s)\r\n", float(total) / 1024, dl_timer.read(), float(total) / dl_timer.read() / 1024);
+    }
+}
+
+void spdmc_testsuite_update(void) {
     int iteration = 0;
     char _key[20] = { };
     char _value[128] = { };
@@ -273,7 +293,7 @@ int main(void) {
     greentea_send_kv("device_booted", 1);
 
     GREENTEA_SETUP(15*60, "sdk_host_tests");
-    spdmc_testsuite_connect();
+    spdmc_testsuite_update();
 
     return 0;
 }
