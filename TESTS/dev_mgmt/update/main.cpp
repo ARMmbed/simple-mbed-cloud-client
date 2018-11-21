@@ -3,7 +3,7 @@
 #include "simple-mbed-cloud-client.h"
 #include "greentea-client/test_env.h"
 
-uint32_t test_timeout = 15*60;
+uint32_t test_timeout = 30*60;
 
 // Heartbeat blinky (to indicate that the board is still alive)
 DigitalOut led1(LED1);
