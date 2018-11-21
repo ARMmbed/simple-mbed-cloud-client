@@ -112,16 +112,18 @@ $ mbed dm init -d "<your company name in Pelion DM>" --model-name "<product mode
  1. Import an Simple Pelion DM Client application that contains the corresponding configuration in `mbed_app.json`. The application will include this Simple Pelion DM Client library.
 
     For examples of platform configuration, see the applications available in the [Quick-start](https://cloud.mbed.com/quick-start).
-   
- 2. Include the `mbed_cloud_dev_credentials.c` developer certificate in your application. For detailed instructions [see the documentation](https://cloud.mbed.com/docs/current/connecting/provisioning-development-devices.html#creating-and-downloading-a-developer-certificate).
 
- 3. Set a global `mbed config` variable `CLOUD_SDK_API_KEY` on the host machine valid for the account that your device will connect to. For example:
+ 2. Set a global `mbed config` variable `CLOUD_SDK_API_KEY` on the host machine valid for the account that your device will connect to. For example:
 
      ```mbed config -G CLOUD_SDK_API_KEY <API_KEY>```
 
      For instructions on how to generate an API key, please [see the documentation](https://cloud.mbed.com/docs/current/integrate-web-app/api-keys.html#generating-an-api-key).
 
-   
+ 3. Initialize your Pelion DM credentials (once per project):
+    ```mbed dm init -d "<your organization>" --model-name "<product model>" -q --force```
+
+    This will create your private/public key pair and also initialize various .c files with these credentials, so you can use Pelion DM connect and (firmware) update features.
+
  4. Remove the `main.cpp`application from the project, or ensure the content of the file is wrapped with `#ifndef MBED_TEST_MODE`.
  
  5. Compile the tests with the `MBED_TEST_MODE` compilation flag.
