@@ -113,8 +113,9 @@ private:
     * mount filesystem again.
     * */
     int test_filesystem(FileSystem *fs, BlockDevice* part);
+    int create_partitions();
 
-    BlockDevice *_bd;
+    BlockDevice *_bd = NULL;
     FileSystem *_fs;
 
     FileSystem *fs1;

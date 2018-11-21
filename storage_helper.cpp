@@ -170,14 +170,16 @@ int StorageHelper::reformat_storage(void) {
 }
 
 #if (MCC_PLATFORM_PARTITION_MODE == 1)
-// bd must be initialized before calling this function.
 int StorageHelper::init_and_mount_partition(FileSystem **fs, BlockDevice** part, int number_of_partition, const char* mount_point) {
     int status;
+
+	if (!_bd)
+        tr_error("StorageHelper::%s() needs BlockDevice initialized with constructor call.", __FUNCTION__);
 
     // Init fs only once.
     if (&(**fs) == NULL) {
         if (&(**part) == NULL) {
-            *part = new MBRBlockDevice(bd, number_of_partition);
+            *part = new MBRBlockDevice(_bd, number_of_partition);
         }
         status = (**part).init();
         if (status != 0) {
@@ -244,7 +246,7 @@ int StorageHelper::test_filesystem(FileSystem *fs, BlockDevice* part) {
 
 // create partitions, initialize and mount partitions
 #if ((MCC_PLATFORM_PARTITION_MODE == 1) && (MCC_PLATFORM_AUTO_PARTITION == 1))
-static int StorageHelper::create_partitions(void) {
+int StorageHelper::create_partitions(void) {
     int status;
 
 #if (NUMBER_OF_PARTITIONS > 0)
@@ -255,7 +257,7 @@ static int StorageHelper::create_partitions(void) {
         assert(0);
     }
 
-    status = MBRBlockDevice::partition(bd, PRIMARY_PARTITION_NUMBER, 0x83, PRIMARY_PARTITION_START, PRIMARY_PARTITION_START + PRIMARY_PARTITION_SIZE);
+    status = MBRBlockDevice::partition(_bd, PRIMARY_PARTITION_NUMBER, 0x83, PRIMARY_PARTITION_START, PRIMARY_PARTITION_START + PRIMARY_PARTITION_SIZE);
     tr_debug("Creating primary partition ...");
     if (status != 0) {
         tr_warn("Creating primary partition failed 0x%X", status);
