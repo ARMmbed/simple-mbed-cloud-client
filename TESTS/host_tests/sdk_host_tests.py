@@ -184,8 +184,9 @@ class SDKTests(BaseHostTest):
     """
     def firmware_campaign_cleanup(self):
         if self.firmware_proc:
-            os.kill(self.firmware_proc.pid, signal.CTRL_C_EVENT)
-            os.kill(self.firmware_proc.pid, signal.CTRL_BREAK_EVENT)
+            if os.name == 'nt':
+                os.kill(self.firmware_proc.pid, signal.CTRL_C_EVENT)
+                os.kill(self.firmware_proc.pid, signal.CTRL_BREAK_EVENT)
             self.firmware_proc.terminate()
             outs, errs = self.firmware_proc.communicate()
             self.logger.prn_inf('Firmware campaign process killed: PID %s' % self.firmware_proc.pid)
