@@ -18,18 +18,12 @@
 
 #include <stdio.h>
 #include "simple-mbed-cloud-client.h"
-#include "mbed-cloud-client/MbedCloudClient.h"
-#include "m2mdevice.h"
-#include "m2mresource.h"
-#include "mbed-client/m2minterface.h"
-#include "key_config_manager.h"
-#include "resource.h"
-#include "mbed-client/m2mvector.h"
-#include "mbed_cloud_client_resource.h"
-#include "factory_configurator_client.h"
-#include "update_client_hub.h"
-#include "mbed-trace/mbed_trace.h"
 #include "mbed-trace-helper.h"
+#include "resource.h"
+
+#ifdef MBED_CLOUD_DEV_UPDATE_ID
+#include "update_client_hub.h"
+#endif
 
 #define TRACE_GROUP "SMCC"
 
@@ -76,6 +70,8 @@ int SimpleMbedCloudClient::init() {
     // Older versions: workaround to prevent possible deletion of credentials:
     wait(1);
 
+#ifdef MBED_CLOUD_DEV_UPDATE_ID
+
     extern const uint8_t arm_uc_vendor_id[];
     extern const uint16_t arm_uc_vendor_id_size;
     extern const uint8_t arm_uc_class_id[];
@@ -83,6 +79,8 @@ int SimpleMbedCloudClient::init() {
 
     ARM_UC_SetVendorId(arm_uc_vendor_id, arm_uc_vendor_id_size);
     ARM_UC_SetClassId(arm_uc_class_id, arm_uc_class_id_size);
+
+#endif
 
     // Initialize Mbed Trace for debugging
     // Create mutex for tracing to avoid broken lines in logs
