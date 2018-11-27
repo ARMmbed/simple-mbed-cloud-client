@@ -66,7 +66,6 @@ void spdmc_testsuite_connect(void) {
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_COUNT, 10);
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Connect to Network");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Initialize Storage");
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Format Storage");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Simple PDMC Initialization");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Bootstrap & Reg.");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Directory");
@@ -102,38 +101,12 @@ void spdmc_testsuite_connect(void) {
 
     // Default storage definition.
     BlockDevice* bd = BlockDevice::get_default_instance();
-    SlicingBlockDevice sd(bd, 0, (1024*1024*2));
-    FATFileSystem fs("fs", &sd);
-
-    GREENTEA_TESTCASE_FINISH("Initialize Storage", 1, 0);
-
-    if (iteration == 0) {
-        GREENTEA_TESTCASE_START("Format Storage");
-
-        int storage_status = sd.erase(0, sd.size());
-        if (storage_status == 0) {
-            storage_status = fs.format(&sd);
-            if (storage_status != 0) {
-                logger("[ERROR] Filesystem init failed\n");
-            }
-        }
-        logger("[INFO] Resetting storage to a clean state for test.\n");
-
-        // Report status to console.
-        if (storage_status == 0) {
-            logger("[INFO] Storage format successful.\r\n");
-        } else {
-            logger("[ERROR] Storage format failed.\r\n");
-            greentea_send_kv("test_failed", 0);
-        }
-
-        GREENTEA_TESTCASE_FINISH("Format Storage", (storage_status == 0), (storage_status != 0));
-    }
+    FileSystem *fs = FileSystem::get_default_instance();
 
     // SimpleMbedCloudClient initialization must be successful.
     GREENTEA_TESTCASE_START("Simple PDMC Initialization");
 
-    SimpleMbedCloudClient client(net, bd, &fs);
+    SimpleMbedCloudClient client(net, bd, fs);
     int client_status = client.init();
 
     // Report status to console.
