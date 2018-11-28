@@ -65,6 +65,7 @@ void spdmc_testsuite_connect(void) {
     if (iteration == 0) {
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_COUNT, 10);
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Connect to Network");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Initialize Storage");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Simple PDMC Initialization");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Bootstrap & Reg.");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion DM Directory");
@@ -95,15 +96,18 @@ void spdmc_testsuite_connect(void) {
     GREENTEA_TESTCASE_FINISH("Connect to Network", (net_status == 0), (net_status != 0));
 
 
+    GREENTEA_TESTCASE_START("Initialize Storage");
+    logger("[INFO] Attempting to initialize storage.\r\n");
     // Default storage definition.
     BlockDevice* bd = BlockDevice::get_default_instance();
     FileSystem *fs = FileSystem::get_default_instance();
+    GREENTEA_TESTCASE_FINISH("Initialize Storage", 1, 0);
 
     // SimpleMbedCloudClient initialization must be successful.
     GREENTEA_TESTCASE_START("Simple PDMC Initialization");
 
     SimpleMbedCloudClient client(net, bd, fs);
-    int client_status = client.init();
+    int client_status = client.init( (iteration == 0) ? true : false );
 
     // Report status to console.
     if (client_status == 0) {
@@ -237,10 +241,9 @@ void spdmc_testsuite_connect(void) {
         GREENTEA_TESTCASE_FINISH("Consistent Identity", (identity_status == 0), (identity_status != 0));
 
         // LwM2M tests
-        logger("[INFO] Beginning LwM2M resource tests.\r\n");
+        logger("[INFO] Wait 2 seconds for LwM2M resource tests after reboot.\r\n");
+        wait_nb(2000);
 
-
-        wait_nb(500);
         // ---------------------------------------------
         // GET test
         GREENTEA_TESTCASE_START("LwM2M GET Test");

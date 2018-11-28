@@ -65,7 +65,7 @@ SimpleMbedCloudClient::~SimpleMbedCloudClient() {
     }
 }
 
-int SimpleMbedCloudClient::init() {
+int SimpleMbedCloudClient::init(bool format) {
     // Requires DAPLink 245+ (https://github.com/ARMmbed/DAPLink/pull/364)
     // Older versions: workaround to prevent possible deletion of credentials:
     wait(1);
@@ -129,7 +129,7 @@ int SimpleMbedCloudClient::init() {
     }
 #endif
 
-    status = verify_cloud_configuration();
+    status = verify_cloud_configuration(format);
 
     if (status != 0) {
     // This is designed to simplify user-experience by auto-formatting the
@@ -145,7 +145,7 @@ int SimpleMbedCloudClient::init() {
         if (status != FCC_STATUS_SUCCESS) {
             return status;
         }
-        status = verify_cloud_configuration();
+        status = verify_cloud_configuration(format);
         if (status != 0) {
             return status;
         }
@@ -413,15 +413,17 @@ int SimpleMbedCloudClient::reset_storage() {
     return status;
 }
 
-int SimpleMbedCloudClient::verify_cloud_configuration() {
+int SimpleMbedCloudClient::verify_cloud_configuration(bool format) {
     int status;
 
 #if MBED_CONF_APP_DEVELOPER_MODE == 1
     tr_debug("Starting developer flow");
-    status = reset_storage();
-    if (status != FCC_STATUS_SUCCESS) {
-    	tr_debug("Failed to reset storage");
-    	return status;
+    if( format ) {
+        status = reset_storage();
+        if (status != FCC_STATUS_SUCCESS) {
+            tr_debug("Failed to reset storage");
+            return status;
+        }
     }
     status = fcc_developer_flow();
     if (status == FCC_STATUS_KCM_FILE_EXIST_ERROR) {
