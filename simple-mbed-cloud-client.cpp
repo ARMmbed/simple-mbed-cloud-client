@@ -418,6 +418,11 @@ int SimpleMbedCloudClient::verify_cloud_configuration() {
 
 #if MBED_CONF_APP_DEVELOPER_MODE == 1
     tr_debug("Starting developer flow");
+    status = reset_storage();
+    if (status != FCC_STATUS_SUCCESS) {
+    	tr_debug("Failed to reset storage");
+    	return status;
+    }
     status = fcc_developer_flow();
     if (status == FCC_STATUS_KCM_FILE_EXIST_ERROR) {
         tr_debug("Developer credentials already exist on storage layer, verifying credentials...");
