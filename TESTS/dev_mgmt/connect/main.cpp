@@ -19,6 +19,7 @@
 
 #include "mbed.h"
 #include "FATFileSystem.h"
+#include "LittleFileSystem.h"
 #include "simple-mbed-cloud-client.h"
 #include "greentea-client/test_env.h"
 #include "common_defines_test.h"
@@ -93,9 +94,10 @@ void spdmc_testsuite_connect(void) {
 
     // provide manifest to greentea so it can correct show skipped and failed tests
     if (iteration == 0) {
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_COUNT, 11);
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_COUNT, 10);
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Connect to " TEST_NETWORK_TYPE);
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Initialize Storage");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Initialize " TEST_BLOCK_DEVICE_TYPE "+" TEST_FILESYSTEM_TYPE);
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Format " TEST_FILESYSTEM_TYPE);
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Initialize Simple PDMC");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion Bootstrap & Reg.");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion Directory");
@@ -133,20 +135,51 @@ void spdmc_testsuite_connect(void) {
 
     test_case_finish("Connect to " TEST_NETWORK_TYPE, iteration + (net_status == 0), (net_status != 0));
 
-    test_case_start("Initialize Storage", 2);
-
+    test_case_start("Initialize " TEST_BLOCK_DEVICE_TYPE "+" TEST_FILESYSTEM_TYPE, 2);
     logger("[INFO] Attempting to initialize storage.\r\n");
 
     // Default storage definition.
     BlockDevice* bd = BlockDevice::get_default_instance();
-    FileSystem *fs = FileSystem::get_default_instance();
-    test_case_finish("Initialize Storage", 1, 0);
+    SlicingBlockDevice sd(bd, 0, MBED_CONF_APP_BASICS_TEST_FS_SIZE);
+#if TEST_USE_FILESYSTEM == FAT
+    FATFileSystem fs("fs", &sd);
+#else
+    LittleFileSystem fs("fs", &sd);
+#endif
+
+    test_case_finish("Initialize " TEST_BLOCK_DEVICE_TYPE "+" TEST_FILESYSTEM_TYPE, iteration + 1, 0);
+
+    if (iteration == 0) {
+        test_case_start("Format " TEST_FILESYSTEM_TYPE, 3);
+        logger("[INFO] Resetting storage to a clean state for test.\n");
+
+        int storage_status = fs.reformat(&sd);
+        if (storage_status != 0) {
+            storage_status = sd.erase(0, sd.size());
+            if (storage_status == 0) {
+                storage_status = fs.format(&sd);
+                if (storage_status != 0) {
+                    logger("[ERROR] Filesystem init failed\n");
+                }
+            }
+        }
+
+        // Report status to console.
+        if (storage_status == 0) {
+            logger("[INFO] Storage format successful.\r\n");
+        } else {
+            logger("[ERROR] Storage format failed.\r\n");
+            test_failed();
+        }
+
+        test_case_finish("Format " TEST_FILESYSTEM_TYPE, (storage_status == 0), (storage_status != 0));
+    }
 
     // SimpleMbedCloudClient initialization must be successful.
-    test_case_start("Initialize Simple PDMC", 3);
+    test_case_start("Initialize Simple PDMC", 4);
 
-    SimpleMbedCloudClient client(net, bd, fs);
-    int client_status = client.init( (iteration == 0) ? true : false );
+    SimpleMbedCloudClient client(net, bd, &fs);
+    int client_status = client.init();
 
     // Report status to console.
     if (client_status == 0) {
@@ -178,9 +211,9 @@ void spdmc_testsuite_connect(void) {
 
     // Register to Pelion Device Management.
     if (iteration == 0) {
-        test_case_start("Pelion Bootstrap & Reg.", 4);
+        test_case_start("Pelion Bootstrap & Reg.", 5);
     } else {
-        test_case_start("Pelion Re-register", 6);
+        test_case_start("Pelion Re-register", 7);
     }
     // Set client callback to report endpoint name.
     client.on_registered(&registered);
@@ -210,7 +243,7 @@ void spdmc_testsuite_connect(void) {
 
     if (iteration == 0) {
         //Start registration status test
-        test_case_start("Pelion Directory", 5);
+        test_case_start("Pelion Directory", 6);
         int reg_status;
 
         logger("[INFO] Wait up to 10 seconds for Device Directory to update after initial registration.\r\n");
@@ -254,7 +287,7 @@ void spdmc_testsuite_connect(void) {
         }
     } else {
         //Start consistent identity test.
-        test_case_start("Post-reset Identity", 7);
+        test_case_start("Post-reset Identity", 8);
         int identity_status;
 
         logger("[INFO] Wait up to 5 seconds for Device Directory to update after reboot.\r\n");
@@ -286,11 +319,11 @@ void spdmc_testsuite_connect(void) {
         // LwM2M tests
         logger("[INFO] Beginning LwM2M resource tests.\r\n");
 
-        wait_nb(2000);
+        wait_nb(1000);
 
         // ---------------------------------------------
         // GET test
-        test_case_start("Resource LwM2M GET", 8);
+        test_case_start("Resource LwM2M GET", 9);
         int get_status;
         // Read original value of /5000/0/1 and wait for Host Test to verify it read the value and send it back.
         greentea_send_kv("verify_lwm2m_get_test", "/5000/0/1");
@@ -318,7 +351,7 @@ void spdmc_testsuite_connect(void) {
 
         // ---------------------------------------------
         // SET test
-        test_case_start("Resource LwM2M SET", 9);
+        test_case_start("Resource LwM2M SET", 10);
         int set_status;
         // Update resource /5000/0/1 from client and observe value
         res_get_test->set_value("test1");
@@ -348,7 +381,7 @@ void spdmc_testsuite_connect(void) {
 
         // ---------------------------------------------
         // PUT Test
-        test_case_start("Resource LwM2M PUT", 10);
+        test_case_start("Resource LwM2M PUT", 11);
         int put_status;
         int current_res_value;
         int updated_res_value;
@@ -385,7 +418,7 @@ void spdmc_testsuite_connect(void) {
 
         // ---------------------------------------------
         // POST test
-        test_case_start("Resource LwM2M POST", 11);
+        test_case_start("Resource LwM2M POST", 12);
         int post_status;
 
         logger("[INFO] Executing POST on /5000/0/3 and waiting for callback function\r\n.");

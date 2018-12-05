@@ -19,6 +19,7 @@
 
 #include "mbed.h"
 #include "FATFileSystem.h"
+#include "LittleFileSystem.h"
 #include "simple-mbed-cloud-client.h"
 #include "greentea-client/test_env.h"
 #include "common_defines_test.h"
@@ -97,7 +98,7 @@ void update_progress(uint32_t progress, uint32_t total) {
         pc.printf("[INFO] Firmware download completed. %.2fKB in %.2f seconds (%.2fKB/s)\r\n",
             float(total) / 1024, dl_timer.read(), float(total) / dl_timer.read() / 1024);
         test_case_finish("Pelion Firmware Download", 1, 0);
-        test_case_start("Pelion Firmware Update", 8);
+        test_case_start("Pelion Firmware Update", 9);
     }
 }
 
@@ -126,9 +127,10 @@ void spdmc_testsuite_update(void) {
 
     // provide manifest to greentea so it can correct show skipped and failed tests
     if (iteration == 0) {
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_COUNT, 11);
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_COUNT, 10);
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Initialize " TEST_BLOCK_DEVICE_TYPE "+" TEST_FILESYSTEM_TYPE);
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Connect to " TEST_NETWORK_TYPE);
-        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Initialize Storage");
+        greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Format " TEST_FILESYSTEM_TYPE);
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Initialize Simple PDMC");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion Bootstrap & Reg.");
         greentea_send_kv(GREENTEA_TEST_ENV_TESTCASE_NAME, "Pelion Directory");
@@ -142,8 +144,33 @@ void spdmc_testsuite_update(void) {
         test_case_finish("Pelion Firmware Update", true, false);
     }
 
+    test_case_start("Initialize " TEST_BLOCK_DEVICE_TYPE "+" TEST_FILESYSTEM_TYPE, 1);
+    logger("[INFO] Attempting to initialize storage.\r\n");
+
+    // Default storage definition.
+    BlockDevice* bd = BlockDevice::get_default_instance();
+    SlicingBlockDevice sd(bd, 0, MBED_CONF_APP_BASICS_TEST_FS_SIZE);
+#if TEST_USE_FILESYSTEM == FAT
+    FATFileSystem fs("fs", &sd);
+#else
+    LittleFileSystem fs("fs", &sd);
+#endif
+
+    test_case_finish("Initialize " TEST_BLOCK_DEVICE_TYPE "+" TEST_FILESYSTEM_TYPE, iteration + 1, 0);
+
+    // Corrupt the image after successful firmware update to ensure that the bootloader won't try to apply it for other test runs
+    if (iteration) {
+#if defined(MBED_CONF_UPDATE_CLIENT_STORAGE_ADDRESS) && defined(MBED_CONF_UPDATE_CLIENT_STORAGE_SIZE)
+        test_case_start("Post-update Erase", 11);
+
+        uint32_t garbage[8];
+        int erase_status = bd->program(garbage, MBED_CONF_UPDATE_CLIENT_STORAGE_ADDRESS, bd->get_program_size());
+        test_case_finish("Post-update Erase", (erase_status == 0), (erase_status != 0));
+#endif
+    }
+
     // Start network connection test.
-    test_case_start("Connect to " TEST_NETWORK_TYPE, 1);
+    test_case_start("Connect to " TEST_NETWORK_TYPE, 2);
     logger("[INFO] Attempting to connect to network.\r\n");
 
     // Connection definition.
@@ -168,32 +195,37 @@ void spdmc_testsuite_update(void) {
 
     test_case_finish("Connect to " TEST_NETWORK_TYPE, iteration + (net_status == 0), (net_status != 0));
 
-    test_case_start("Initialize Storage", 2);
+    if (iteration == 0) {
+        test_case_start("Format " TEST_FILESYSTEM_TYPE, 3);
+        logger("[INFO] Resetting storage to a clean state for test.\n");
 
-    logger("[INFO] Attempting to initialize storage.\r\n");
+        int storage_status = fs.reformat(&sd);
+        if (storage_status != 0) {
+            storage_status = sd.erase(0, sd.size());
+            if (storage_status == 0) {
+                storage_status = fs.format(&sd);
+                if (storage_status != 0) {
+                    logger("[ERROR] Filesystem init failed\n");
+                }
+            }
+        }
 
-    // Default storage definition.
-    BlockDevice* bd = BlockDevice::get_default_instance();
-    FileSystem *fs = FileSystem::get_default_instance();
-    test_case_finish("Initialize Storage", 1, 0);
+        // Report status to console.
+        if (storage_status == 0) {
+            logger("[INFO] Storage format successful.\r\n");
+        } else {
+            logger("[ERROR] Storage format failed.\r\n");
+            test_failed();
+        }
 
-    // Corrupt the image after successful firmware update to ensure that the bootloader won't try to apply it for other test runs
-    if (iteration) {
-#if defined(MBED_CONF_UPDATE_CLIENT_STORAGE_ADDRESS) && defined(MBED_CONF_UPDATE_CLIENT_STORAGE_SIZE)
-        test_case_start("Post-update Erase", 10);
-
-        uint32_t garbage[8];
-        int erase_status = bd->program(garbage, MBED_CONF_UPDATE_CLIENT_STORAGE_ADDRESS, bd->get_program_size());
-        test_case_finish("Post-update Erase", (erase_status == 0), (erase_status != 0));
-#endif
+        test_case_finish("Format " TEST_FILESYSTEM_TYPE, (storage_status == 0), (storage_status != 0));
     }
 
-
     // SimpleMbedCloudClient initialization must be successful.
-    test_case_start("Initialize Simple PDMC", 3);
+    test_case_start("Initialize Simple PDMC", 4);
 
-    SimpleMbedCloudClient client(net, bd, fs);
-    int client_status = client.init( (iteration == 0) ? true : false );
+    SimpleMbedCloudClient client(net, bd, &fs);
+    int client_status = client.init();
 
     // Report status to console.
     if (client_status == 0) {
@@ -215,9 +247,9 @@ void spdmc_testsuite_update(void) {
 
     // Register to Pelion Device Management.
     if (iteration == 0) {
-        test_case_start("Pelion Bootstrap & Reg.", 6);
+        test_case_start("Pelion Bootstrap & Reg.", 5);
     } else {
-        test_case_start("Pelion Re-register", 9);
+        test_case_start("Pelion Re-register", 10);
     }
     // Set client callback to report endpoint name.
     client.on_registered(&registered);
@@ -247,7 +279,7 @@ void spdmc_testsuite_update(void) {
 
     if (iteration == 0) {
         //Start registration status test
-        test_case_start("Pelion Directory", 5);
+        test_case_start("Pelion Directory", 6);
         int reg_status;
 
         logger("[INFO] Wait up to 10 seconds for Device Directory to update after initial registration.\r\n");
@@ -278,7 +310,7 @@ void spdmc_testsuite_update(void) {
         test_case_finish("Pelion Directory", (reg_status == 0), (reg_status != 0));
 
         if (reg_status == 0) {
-            test_case_start("Pelion Firmware Prepare", 6);
+            test_case_start("Pelion Firmware Prepare", 7);
             wait_nb(500);
             int fw_status;
             greentea_send_kv("firmware_prepare", 1);
@@ -296,7 +328,7 @@ void spdmc_testsuite_update(void) {
             }
             test_case_finish("Pelion Firmware Prepare", (fw_status == 0), (fw_status != 0));
 
-            test_case_start("Pelion Firmware Download", 7);
+            test_case_start("Pelion Firmware Download", 8);
             logger("[INFO] Update campaign has started.\r\n");
             // The device should download firmware and reset at this stage
         }
@@ -306,7 +338,7 @@ void spdmc_testsuite_update(void) {
         }
     } else {
         //Start consistent identity test.
-        test_case_start("Post-update Identity", 11);
+        test_case_start("Post-update Identity", 12);
         int identity_status;
 
         logger("[INFO] Wait up to 5 seconds for Device Directory to update after reboot.\r\n");
