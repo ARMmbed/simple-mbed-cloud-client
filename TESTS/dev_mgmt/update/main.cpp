@@ -255,7 +255,7 @@ void spdmc_testsuite_update(void) {
     client.on_registered(&registered);
     client.register_and_connect();
 
-    i = 600; // wait 60 seconds
+    i = 1200; // wait 120 seconds
     while (i-- > 0 && !client.is_client_registered()) {
         wait_ms(100);
     }
