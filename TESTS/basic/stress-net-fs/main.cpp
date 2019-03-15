@@ -190,10 +190,10 @@ utest::v1::status_t greentea_setup(const size_t number_of_cases) {
 Case cases[] = {
     Case(TEST_NETWORK_TYPE " network setup", setup_network),
     Case(TEST_BLOCK_DEVICE_TYPE "+" TEST_FILESYSTEM_TYPE " format", test_format),
-    Case("Test memory allocation of 10 K bytes", test_malloc<TEST_MEMORY_SIZE_10K>),
-    Case("Test memory allocation of 20 K bytes", test_malloc<TEST_MEMORY_SIZE_20K>),
-    Case("Test memory allocation of 40 K bytes", test_malloc<TEST_MEMORY_SIZE_40K>),
     Case("Test memory allocation of 60 K bytes", test_malloc<TEST_MEMORY_SIZE_60K>),
+    Case("Test memory allocation of 40 K bytes", test_malloc<TEST_MEMORY_SIZE_40K>),
+    Case("Test memory allocation of 20 K bytes", test_malloc<TEST_MEMORY_SIZE_20K>),
+    Case("Test memory allocation of 10 K bytes", test_malloc<TEST_MEMORY_SIZE_10K>),
 #if MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE != CELLULAR
     Case(TEST_BLOCK_DEVICE_TYPE "+" TEST_FILESYSTEM_TYPE "+" TEST_NETWORK_TYPE " 1 thread, dl, file seq.", stress_1_thread),
     Case(TEST_BLOCK_DEVICE_TYPE "+" TEST_FILESYSTEM_TYPE "+" TEST_NETWORK_TYPE " 2 threads, dl, 1kb", stress_2_threads),
